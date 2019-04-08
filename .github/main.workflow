@@ -5,4 +5,5 @@ workflow "automerge" {
 
 action "Merge pull requests" {
   uses = "pascalgn/automerge-action@v0.1.1"
+  secrets = ["GITHUB_TOKEN"]
 }
