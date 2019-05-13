@@ -1,16 +1,12 @@
 # wikileet
 
-A new Flutter project.
+Group wiki for gift lists
 
-## Getting Started
+# Contributing
 
-This project is a starting point for a Flutter application.
+When contributing to this repository, please first discuss the change you wish to make via issue, email, or any other method with the owners of this repository before making a change.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://flutter.io/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.io/docs/cookbook)
-
-For help getting started with Flutter, view our 
-[online documentation](https://flutter.io/docs), which offers tutorials, 
-samples, guidance on mobile development, and a full API reference.
+**Pull Request Process**
+* Pull request should include instructions on how to test if there are no automated tests written. Screenshots, and code comments are helpful in expidinting a PR.
+* Update the README.md with details of changes to the interface, this includes new environment variables, exposed ports, useful file locations and container parameters.
+* All tests MUST pass before a PR will be merged
