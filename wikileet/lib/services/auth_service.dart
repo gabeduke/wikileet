@@ -6,32 +6,29 @@ class AuthService {
   // Sign in with Google
   Future<auth.UserCredential?> signInWithGoogle() async {
     try {
-      // Trigger the authentication flow
+      print("Starting Google Sign-In...");
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
       if (googleUser == null) {
-        // The user canceled the sign-in
+        print("Google Sign-In canceled by user.");
         return null;
       }
 
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      print("Google Sign-In successful: ${googleUser.email}");
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      // Create a new credential
       final credential = auth.GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Sign in to Firebase with the Google user credentials
+      print("Signing into Firebase with Google credentials...");
       return await auth.FirebaseAuth.instance.signInWithCredential(credential);
     } catch (e) {
-      // Handle error
-      print(e.toString());
+      print("Google Sign-In error: $e");
       return null;
     }
   }
 
-  // Other authentication methods can be added here
+// Other authentication methods can be added here
 }

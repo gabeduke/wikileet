@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final googleUser = await _googleSignIn.signInSilently();
       if (googleUser != null) {
+        print("Silent sign-in successful: ${googleUser.email}");
         _authenticateWithFirebase(googleUser);
       }
     } catch (e) {
