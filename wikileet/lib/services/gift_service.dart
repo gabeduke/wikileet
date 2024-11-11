@@ -8,48 +8,72 @@ class GiftService {
 
   GiftService({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
+  
+  // Method for batch adding multiple gifts
+  Future<void> batchAddGifts(String userId, List<Gift> gifts) async {
+    final batch = _firestore.batch();
+    final userGiftsRef = _firestore.collection('users').doc(userId).collection('gifts');
 
-  // Add a new gift
-  Future<void> addGift(String userId, Gift gift) async {
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('gifts')
-        .doc(gift.id)
-        .set(gift.toFirestore());
-  }
-
-  // Retrieve a gift by ID for a specific user
-  Future<Gift?> getGift(String userId, String giftId) async {
-    final docSnapshot = await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('gifts')
-        .doc(giftId)
-        .get();
-    if (docSnapshot.exists) {
-      return Gift.fromFirestore(docSnapshot);
+    for (var gift in gifts) {
+      final giftRef = userGiftsRef.doc(gift.id);
+      batch.set(giftRef, gift.toFirestore());
     }
-    return null;
+
+    try {
+      await batch.commit();
+    } catch (e) {
+      throw Exception("Failed to add gifts: $e");
+    }
   }
 
-  // Update specific fields of a gift document
+  // Stream to get real-time updates for a user's gift list
+  Stream<List<Gift>> getGiftListStream(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('gifts')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+        snapshot.docs.map((doc) => Gift.fromFirestore(doc)).toList());
+  }
+
+  Future<void> addGift(String userId, Gift gift) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('gifts')
+          .doc(gift.id)
+          .set(gift.toFirestore());
+    } catch (e) {
+      throw Exception("Failed to add gift: $e");
+    }
+  }
+
   Future<void> updateGift(String userId, String giftId, Map<String, dynamic> data) async {
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('gifts')
-        .doc(giftId)
-        .update(data);
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('gifts')
+          .doc(giftId)
+          .update(data);
+    } catch (e) {
+      throw Exception("Failed to update gift: $e");
+    }
   }
 
-  // Delete a gift document
   Future<void> deleteGift(String userId, String giftId) async {
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('gifts')
-        .doc(giftId)
-        .delete();
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('gifts')
+          .doc(giftId)
+          .delete();
+    } catch (e) {
+      throw Exception("Failed to delete gift: $e");
+    }
   }
 }
