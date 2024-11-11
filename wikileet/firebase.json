@@ -1,0 +1,43 @@
+{
+    "hosting": {
+        "source": "./"
+    },
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "wikileet",
+                    "appId": "1:179879905839:android:c1345a524a981ca67994da",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "ios": {
+                "default": {
+                    "projectId": "wikileet",
+                    "appId": "1:179879905839:ios:1addae05a98cc37c7994da",
+                    "uploadDebugSymbols": false,
+                    "fileOutput": "ios/Runner/GoogleService-Info.plist"
+                }
+            },
+            "macos": {
+                "default": {
+                    "projectId": "wikileet",
+                    "appId": "1:179879905839:ios:1addae05a98cc37c7994da",
+                    "uploadDebugSymbols": false,
+                    "fileOutput": "macos/Runner/GoogleService-Info.plist"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "wikileet",
+                    "configurations": {
+                        "android": "1:179879905839:android:c1345a524a981ca67994da",
+                        "ios": "1:179879905839:ios:1addae05a98cc37c7994da",
+                        "macos": "1:179879905839:ios:1addae05a98cc37c7994da",
+                        "web": "1:179879905839:web:4247bf5eb572e5147994da"
+                    }
+                }
+            }
+        }
+    }
+}

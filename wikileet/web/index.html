@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>WikiLeet</title>
+    <base href="/" />
+
+    <!--
+      Configure the viewport meta tag to make your app responsive on mobile devices.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!--
+      Include the manifest file, which provides metadata for your PWA (Progressive Web App).
+    -->
+    <link rel="manifest" href="manifest.json" />
+
+    <!--
+      Define theme color and other meta tags.
+    -->
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="Your app description goes here." />
+    <meta name="google-signin-client_id" content="179879905839-0vhl12iad46lf3ifmusk16g7mcp1q3le.apps.googleusercontent.com" />
+
+    <!--
+      Add any additional meta tags or links to stylesheets here.
+    -->
+
+    <!--
+      This script checks for Flutter service worker support.
+    -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker
+            .register('flutter_service_worker.js')
+            .then((reg) => {
+              console.log('Service worker registered.', reg);
+            });
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <!--
+      The "flt-glass-pane" div is where the Flutter app will render.
+    -->
+    <script src="main.dart.js" type="application/javascript"></script>
+  </body>
+</html>

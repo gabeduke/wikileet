@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "179879905839",
+    "firebase_url": "https://wikileet.firebaseio.com",
+    "project_id": "wikileet",
+    "storage_bucket": "wikileet.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:179879905839:android:c1345a524a981ca67994da",
+        "android_client_info": {
+          "package_name": "com.leetserve.wikileet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "179879905839-4ovl101i5rphgskmun3cf0ctg8qql4gr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuOimnxozeN25MG5qNZxmDhr4nTg8qIVI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "179879905839-4ovl101i5rphgskmun3cf0ctg8qql4gr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "179879905839-p56trdr0cd1n97dku471l2k51qvirod0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.wikileet"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

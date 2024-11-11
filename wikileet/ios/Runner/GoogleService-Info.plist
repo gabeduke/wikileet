@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>179879905839-p56trdr0cd1n97dku471l2k51qvirod0.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.179879905839-p56trdr0cd1n97dku471l2k51qvirod0</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBkyYy7Z6sDyZjgQuWBU7tApgwH7AW42nM</string>
+	<key>GCM_SENDER_ID</key>
+	<string>179879905839</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.wikileet</string>
+	<key>PROJECT_ID</key>
+	<string>wikileet</string>
+	<key>STORAGE_BUCKET</key>
+	<string>wikileet.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:179879905839:ios:1addae05a98cc37c7994da</string>
+	<key>DATABASE_URL</key>
+	<string>https://wikileet.firebaseio.com</string>
+</dict>
+</plist>
