@@ -21,9 +21,6 @@ class GiftListScreen extends StatelessWidget {
     final isOwner = currentUser?.uid == userId; // Determine if current user is the owner
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('My Gift List'),
-      ),
       body: StreamBuilder<List<Gift>>(
         stream: giftService.getGiftListStream(userId),
         builder: (context, snapshot) {
