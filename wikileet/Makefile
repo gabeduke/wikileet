@@ -13,3 +13,7 @@ build:
 .PHONY: publish
 publish: build
 	firebase deploy
+
+.PHONY: test
+test:
+	flutter test
