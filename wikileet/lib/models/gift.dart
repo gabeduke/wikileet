@@ -9,6 +9,7 @@ class Gift {
   final double? price;
   final String? link;
   final String? reservedBy;
+  final String? purchasedBy; // New field to track who marked as purchased
   final bool visibility;
   final bool purchased;
   final Timestamp createdAt;
@@ -20,6 +21,7 @@ class Gift {
     this.price,
     this.link,
     this.reservedBy,
+    this.purchasedBy, // Initialize the new field
     required this.visibility,
     required this.purchased,
     required this.createdAt,
@@ -35,6 +37,7 @@ class Gift {
       price: data['price'] != null ? (data['price'] as num).toDouble() : null,
       link: data['link'],
       reservedBy: data['reservedBy'],
+      purchasedBy: data['purchasedBy'], // Retrieve purchasedBy from Firestore
       visibility: data['visibility'] ?? true,
       purchased: data['purchased'] ?? false,
       createdAt: data['createdAt'] ?? Timestamp.now(),
@@ -49,6 +52,7 @@ class Gift {
       'price': price,
       'link': link,
       'reservedBy': reservedBy,
+      'purchasedBy': purchasedBy, // Include purchasedBy when saving to Firestore
       'visibility': visibility,
       'purchased': purchased,
       'createdAt': createdAt,
