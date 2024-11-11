@@ -1,13 +1,16 @@
 // lib/screens/family_list_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:wikileet/models/family_member.dart';
 import 'package:wikileet/services/family_service.dart';
 import 'package:wikileet/screens/gift_list_screen.dart';
 
 class FamilyListScreen extends StatelessWidget {
   final String userId;
+  final FamilyService familyService;
 
-  FamilyListScreen({required this.userId});
+  FamilyListScreen({required this.userId, FamilyService? familyService})
+      : familyService = familyService ?? FamilyService();
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +19,7 @@ class FamilyListScreen extends StatelessWidget {
         title: Text('Family Members'),
       ),
       body: FutureBuilder<List<FamilyMember>>(
-        future: FamilyService().getFamilyMembers(userId), // Assuming FamilyService has a method to get family members
+        future: familyService.getFamilyMembers(userId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -33,7 +36,6 @@ class FamilyListScreen extends StatelessWidget {
               return ListTile(
                 title: Text(member.displayName),
                 onTap: () {
-                  // Navigate to the selected member's gift list
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => GiftListScreen(userId: member.id),

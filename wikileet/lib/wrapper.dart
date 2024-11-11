@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/login_screen.dart';
-import 'screens/main_app_screen.dart';
+import 'screens/main_navigation_screen.dart';
 
 class Wrapper extends StatelessWidget {
   @override
@@ -16,7 +16,7 @@ class Wrapper extends StatelessWidget {
           return Center(child: CircularProgressIndicator());
         } else if (snapshot.hasData) {
           // User is signed in
-          return MainAppScreen();
+          return MainNavigationScreen(); // Load MainNavigationScreen
         } else {
           // User is not signed in
           return LoginScreen();
