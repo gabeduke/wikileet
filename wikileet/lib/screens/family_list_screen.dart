@@ -4,10 +4,36 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wikileet/viewmodels/family_viewmodel.dart';
 import 'package:wikileet/screens/gift_list_screen.dart';
-
+import 'package:wikileet/services/navigation_service.dart'; // Import NavigationService
 import 'package:wikileet/models/user.dart';
 
-class FamilyListScreen extends StatelessWidget {
+class FamilyListScreen extends StatefulWidget {
+  @override
+  _FamilyListScreenState createState() => _FamilyListScreenState();
+}
+
+class _FamilyListScreenState extends State<FamilyListScreen> {
+  final NavigationService _navigationService = NavigationService(); // Initialize NavigationService
+
+  @override
+  void initState() {
+    super.initState();
+    print("FamilyListScreen initState called");
+    _checkFamilyGroup();
+  }
+
+  Future<void> _checkFamilyGroup() async {
+    print("Inside _checkFamilyGroup method"); // Add this log
+
+    // Get the current user ID from the provider, Firebase, or other source
+    final userId = Provider.of<FamilyViewModel>(context, listen: false).currentUserId;
+
+    if (userId != null) {
+      print("Running family group check for user ID: $userId");
+      await _navigationService.checkFamilyGroupAndNavigate(userId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<FamilyViewModel>(

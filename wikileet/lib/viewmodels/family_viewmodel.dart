@@ -15,6 +15,7 @@ class FamilyViewModel with ChangeNotifier {
   List<User> houseMembers = [];
   bool isLoading = false;
   String? errorMessage;
+  String? currentUserId;
 
   Future<void> loadFamilyForUser(String userId) async {
     isLoading = true;

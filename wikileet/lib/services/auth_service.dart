@@ -6,21 +6,10 @@ import 'package:wikileet/services/user_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']); // Use one instance
-
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
   final UserService _userService = UserService();
 
-  // Silent sign-in for returning users
-  Future<GoogleSignInAccount?> signInSilently() async {
-    try {
-      return await _googleSignIn.signInSilently();
-    } catch (e) {
-      print("Silent sign-in error: $e");
-      return null;
-    }
-  }
-
-  // Sign-in with Google using a popup
+  // Sign-in with Google and return the authenticated user
   Future<User?> signInWithGoogle() async {
     try {
       final googleUser = await _googleSignIn.signIn();
@@ -36,7 +25,7 @@ class AuthService {
       final user = userCredential.user;
 
       if (user != null) {
-        // Add user to Firestore only if they don't exist
+        // Ensure user exists in Firestore
         await _userService.addUserIfNotExist(user);
       }
       return user;
@@ -46,7 +35,7 @@ class AuthService {
     }
   }
 
-  // Sign out from both Firebase and Google
+  // Sign out from Firebase and Google
   Future<void> signOut() async {
     await _auth.signOut();
     await _googleSignIn.signOut();
