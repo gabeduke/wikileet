@@ -18,7 +18,7 @@ void main() {
         profilePicUrl: 'http://example.com/profile.jpg',
       );
 
-      final firestoreData = user.toFirestore();
+      final firestoreData = user.toJson();
       expect(firestoreData['displayName'], 'Test User');
       expect(firestoreData['email'], 'test@example.com');
       expect(firestoreData['familyGroupId'], 'group1');
@@ -36,7 +36,7 @@ void main() {
 
       // Retrieve the mock document and deserialize it
       final snapshot = await fakeFirestore.collection('users').doc('123').get();
-      final user = User.fromFirestore(snapshot);
+      final user = User.fromJson(snapshot);
 
       expect(user.uid, '123');
       expect(user.displayName, 'Test User');

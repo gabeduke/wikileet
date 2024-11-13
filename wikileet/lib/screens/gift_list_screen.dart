@@ -1,136 +1,312 @@
-// lib/screens/gift_list_screen.dart
-
+// gift_list_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wikileet/screens/add_edit_gift_screen.dart';
 import 'package:wikileet/screens/batch_add_gifts_screen.dart';
-import 'package:wikileet/models/gift.dart';
 import 'package:wikileet/services/gift_service.dart';
+import 'package:wikileet/viewmodels/gift_list_viewmodel.dart';
 
 class GiftListScreen extends StatelessWidget {
   final String userId;
-  final GiftService giftService;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  GiftListScreen({required this.userId, GiftService? giftService})
-      : giftService = giftService ?? GiftService();
+  GiftListScreen({required this.userId});
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = _auth.currentUser;
-    final isOwner = currentUser?.uid == userId; // Determine if current user is the owner
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUserId = currentUser?.uid ?? '';
 
-    return Scaffold(
-      body: StreamBuilder<List<Gift>>(
-        stream: giftService.getGiftListStream(userId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error loading gifts'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(child: Text('No gifts found. Add your first gift!'));
-          }
-
-          final gifts = snapshot.data!;
-          return ListView.builder(
-            itemCount: gifts.length,
-            itemBuilder: (context, index) {
-              final gift = gifts[index];
-
-              return ListTile(
-                title: Text(gift.name),
-                subtitle: Text(gift.description),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isOwner)
-                      IconButton(
-                        icon: Icon(Icons.edit),
+  return ChangeNotifierProvider(
+    create: (_) => GiftListViewModel(
+      giftService: GiftService(),
+      giftListOwnerId: userId,
+      currentUserId: currentUserId,
+    ),
+    child: Consumer<GiftListViewModel>(
+      builder: (context, viewModel, child) {
+        if (viewModel.gifts.isEmpty) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(viewModel.isOwner ? 'My Gift List' : 'Gift List'),
+            ),
+            body: viewModel.giftsByCategory.isEmpty
+                ? Center(child: Text('No gifts found.'))
+                : ListView(
+                    children: viewModel.giftsByCategory.entries.map((entry) {
+                      final category = entry.key;
+                      final gifts = entry.value;
+                      return ExpansionTile(
+                        title: Text(category),
+                        children: gifts.map((gift) {
+                          return ListTile(
+                            title: Text(
+                              gift.name,
+                              style: gift.purchasedBy != null
+                                  ? TextStyle(
+                                      decoration: TextDecoration.lineThrough,
+                                      color: Colors.grey,
+                                    )
+                                  : null,
+                            ),
+                            subtitle: Text(
+                              gift.description,
+                              style: gift.purchasedBy != null
+                                  ? TextStyle(
+                                      decoration: TextDecoration.lineThrough,
+                                      color: Colors.grey,
+                                    )
+                                  : null,
+                            ),
+                            onTap: gift.url != null
+                                ? () async {
+                                    if (await canLaunchUrl(gift.url! as Uri)) {
+                                      await launchUrl(gift.url! as Uri);
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text('Could not open URL')),
+                                      );
+                                    }
+                                  }
+                                : null,
+                            trailing: viewModel.isOwner
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(Icons.edit),
+                                        onPressed: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  AddEditGiftScreen(
+                                                userId:
+                                                    viewModel.currentUserId,
+                                                gift: gift,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.delete),
+                                        onPressed: () async {
+                                          await viewModel.deleteGift(gift);
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                                content:
+                                                    Text('Gift deleted')),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  )
+                                : viewModel.canTogglePurchasedStatus(gift)
+                                    ? IconButton(
+                                        icon: Icon(
+                                          gift.purchasedBy ==
+                                                  viewModel.currentUserId
+                                              ? Icons.undo
+                                              : Icons
+                                                  .shopping_cart_checkout,
+                                        ),
+                                        onPressed: () async {
+                                          await viewModel
+                                              .togglePurchasedStatus(gift);
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                gift.purchasedBy ==
+                                                        viewModel
+                                                            .currentUserId
+                                                    ? 'Gift unmarked as purchased'
+                                                    : 'Gift marked as purchased',
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      )
+                                    : null,
+                          );
+                        }).toList(),
+                      );
+                    }).toList(),
+                  ),
+            floatingActionButton: viewModel.isOwner
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      FloatingActionButton(
+                        heroTag: 'addSingle',
+                        child: Icon(Icons.add),
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (context) => AddEditGiftScreen(
-                                userId: userId,
-                                gift: gift,
-                              ),
+                                  userId: viewModel.currentUserId),
                             ),
                           );
                         },
                       ),
-                    if (!isOwner && gift.purchasedBy == null)
-                      IconButton(
-                        icon: Icon(Icons.check),
-                        onPressed: () async {
-                          try {
-                            await giftService.updateGift(userId, gift.id, {
-                              'purchasedBy': currentUser?.uid,
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Marked as purchased')),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to mark as purchased')),
-                            );
-                          }
+                      SizedBox(height: 10),
+                      FloatingActionButton(
+                        heroTag: 'addBatch',
+                        child: Icon(Icons.add_to_photos),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => BatchAddGiftsScreen(
+                                  userId: viewModel.currentUserId),
+                            ),
+                          );
                         },
                       ),
-                    if (isOwner)
-                      IconButton(
-                        icon: Icon(Icons.delete),
-                        onPressed: () async {
-                          try {
-                            await giftService.deleteGift(userId, gift.id);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Gift deleted')),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to delete gift')),
-                            );
-                          }
-                        },
-                      ),
-                  ],
-                ),
-              );
-            },
+                    ],
+                  )
+                : null,
           );
-        },
-      ),
-      floatingActionButton: isOwner
-          ? Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            heroTag: 'addSingle',
-            child: Icon(Icons.add),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => AddEditGiftScreen(userId: userId),
-                ),
-              );
-            },
-          ),
-          SizedBox(height: 10),
-          FloatingActionButton(
-            heroTag: 'addBatch',
-            child: Icon(Icons.add_to_photos),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => BatchAddGiftsScreen(userId: userId),
-                ),
-              );
-            },
-          ),
-        ],
-      )
-          : null,
-    );
-  }
-}
+        } else {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(viewModel.isOwner ? 'My Gift List' : 'Gift List'),
+            ),
+            body: ListView(
+              children: viewModel.giftsByCategory.entries.map((entry) {
+                final category = entry.key;
+                final gifts = entry.value;
+                return ExpansionTile(
+                  title: Text(category),
+                  children: gifts.map((gift) {
+                    return ListTile(
+                      title: Text(
+                        gift.name,
+                        style: gift.purchasedBy != null
+                            ? TextStyle(
+                                decoration: TextDecoration.lineThrough,
+                                color: Colors.grey,
+                              )
+                            : null,
+                      ),
+                      subtitle: Text(
+                        gift.description,
+                        style: gift.purchasedBy != null
+                            ? TextStyle(
+                                decoration: TextDecoration.lineThrough,
+                                color: Colors.grey,
+                              )
+                            : null,
+                      ),
+                      onTap: gift.url != null
+                          ? () async {
+                              if (await canLaunchUrl(gift.url! as Uri)) {
+                                await launchUrl(gift.url! as Uri);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text('Could not open URL')),
+                                );
+                              }
+                            }
+                          : null,
+                      trailing: viewModel.isOwner
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.edit),
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            AddEditGiftScreen(
+                                          userId: viewModel.currentUserId,
+                                          gift: gift,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.delete),
+                                  onPressed: () async {
+                                    await viewModel.deleteGift(gift);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text('Gift deleted')),
+                                    );
+                                  },
+                                ),
+                              ],
+                            )
+                          : viewModel.canTogglePurchasedStatus(gift)
+                              ? IconButton(
+                                  icon: Icon(
+                                    gift.purchasedBy ==
+                                            viewModel.currentUserId
+                                        ? Icons.undo
+                                        : Icons.shopping_cart_checkout,
+                                  ),
+                                  onPressed: () async {
+                                    await viewModel
+                                        .togglePurchasedStatus(gift);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          gift.purchasedBy ==
+                                                  viewModel.currentUserId
+                                              ? 'Gift unmarked as purchased'
+                                              : 'Gift marked as purchased',
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                )
+                              : null,
+                    );
+                  }).toList(),
+                );
+              }).toList(),
+            ),
+            floatingActionButton: viewModel.isOwner
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      FloatingActionButton(
+                        heroTag: 'addSingle',
+                        child: Icon(Icons.add),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => AddEditGiftScreen(
+                                  userId: viewModel.currentUserId),
+                            ),
+                          );
+                        },
+                      ),
+                      SizedBox(height: 10),
+                      FloatingActionButton(
+                        heroTag: 'addBatch',
+                        child: Icon(Icons.add_to_photos),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => BatchAddGiftsScreen(
+                                  userId: viewModel.currentUserId),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  )
+                : null,
+          );
+        }
+      },
+    ),
+  );
+}}

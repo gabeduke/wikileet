@@ -17,6 +17,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Gift List App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        // Define text themes, button themes, etc.
+      ),
       home: Wrapper(),
     );
   }

@@ -7,9 +7,10 @@ class Gift {
   final String name;
   final String description;
   final double? price;
-  final String? link;
+  final String? url; // New field
+  final String? category; // New field
   final String? reservedBy;
-  final String? purchasedBy; // New field to track who marked as purchased
+  final String? purchasedBy;
   final bool visibility;
   final bool purchased;
   final Timestamp createdAt;
@@ -19,15 +20,15 @@ class Gift {
     required this.name,
     required this.description,
     this.price,
-    this.link,
+    this.url,
+    this.category,
     this.reservedBy,
-    this.purchasedBy, // Initialize the new field
+    this.purchasedBy,
     required this.visibility,
     required this.purchased,
     required this.createdAt,
   });
 
-  // Factory constructor to create a Gift instance from Firestore document
   factory Gift.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return Gift(
@@ -35,24 +36,25 @@ class Gift {
       name: data['name'] ?? '',
       description: data['description'] ?? '',
       price: data['price'] != null ? (data['price'] as num).toDouble() : null,
-      link: data['link'],
+      url: data['url'], // Retrieve url from Firestore
+      category: data['category'], // Retrieve category from Firestore
       reservedBy: data['reservedBy'],
-      purchasedBy: data['purchasedBy'], // Retrieve purchasedBy from Firestore
+      purchasedBy: data['purchasedBy'],
       visibility: data['visibility'] ?? true,
       purchased: data['purchased'] ?? false,
       createdAt: data['createdAt'] ?? Timestamp.now(),
     );
   }
 
-  // Convert Gift instance to Firestore-compatible JSON
   Map<String, dynamic> toFirestore() {
     return {
       'name': name,
       'description': description,
       'price': price,
-      'link': link,
+      'url': url, // Include url when saving to Firestore
+      'category': category, // Include category when saving to Firestore
       'reservedBy': reservedBy,
-      'purchasedBy': purchasedBy, // Include purchasedBy when saving to Firestore
+      'purchasedBy': purchasedBy,
       'visibility': visibility,
       'purchased': purchased,
       'createdAt': createdAt,

@@ -18,7 +18,7 @@ class User {
   });
 
   // Factory constructor for creating a new User instance from Firestore document
-  factory User.fromFirestore(DocumentSnapshot doc) {
+  factory User.fromJson(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return User(
       uid: doc.id,
@@ -29,8 +29,7 @@ class User {
     );
   }
 
-  // Convert User instance to Firestore compatible JSON
-  Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toJson() {
     return {
       'displayName': displayName,
       'email': email,

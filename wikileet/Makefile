@@ -11,8 +11,12 @@ build:
 	flutter build web
 
 .PHONY: publish
-publish: build
+publish: clean build
 	firebase deploy
+
+.PHONY: clean
+clean:
+	flutter clean
 
 .PHONY: test
 test:

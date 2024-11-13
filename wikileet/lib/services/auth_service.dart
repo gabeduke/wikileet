@@ -1,34 +1,47 @@
 // lib/services/auth_service.dart
-import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:wikileet/services/user_service.dart';
 
 class AuthService {
-  // Sign in with Google
-  Future<auth.UserCredential?> signInWithGoogle() async {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final UserService _userService = UserService();
+
+  Future<User?> signInWithGoogle() async {
     try {
-      print("Starting Google Sign-In...");
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null; // User canceled sign-in
 
-      if (googleUser == null) {
-        print("Google Sign-In canceled by user.");
-        return null;
-      }
-
-      print("Google Sign-In successful: ${googleUser.email}");
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      final credential = auth.GoogleAuthProvider.credential(
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      print("Signing into Firebase with Google credentials...");
-      return await auth.FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+
+      if (user != null) {
+        // Add user to Firestore only if they don't exist
+        await _userService.addUserIfNotExists(user);
+      }
+      return user;
     } catch (e) {
-      print("Google Sign-In error: $e");
-      return null;
+      print("Google sign-in error: $e");
+      rethrow;
     }
   }
 
-// Other authentication methods can be added here
+Future<void> signOut() async {
+    await _auth.signOut();
+    await _googleSignIn.signOut();
+  }
+
+  Future<void> signInSilently() async {
+    final googleUser = await _googleSignIn.signInSilently();
+    if (googleUser != null) {
+      await signInWithGoogle();
+    }
+  }
 }

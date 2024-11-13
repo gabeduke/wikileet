@@ -1,6 +1,6 @@
+// login_screen.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:wikileet/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -8,7 +8,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
@@ -16,44 +16,22 @@ class _LoginScreenState extends State<LoginScreen> {
     _initiateSignInSilently();
   }
 
-  // Automatically try to sign in the user silently if they're already authenticated
   Future<void> _initiateSignInSilently() async {
     try {
-      final googleUser = await _googleSignIn.signInSilently();
-      if (googleUser != null) {
-        print("Silent sign-in successful: ${googleUser.email}");
-        _authenticateWithFirebase(googleUser);
-      }
+      await _authService.signInSilently();
     } catch (e) {
       print("Silent sign-in error: $e");
     }
   }
 
-  // Authenticate with Firebase
-  Future<void> _authenticateWithFirebase(GoogleSignInAccount googleUser) async {
-    try {
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      await FirebaseAuth.instance.signInWithCredential(credential);
-    } catch (e) {
-      print("Firebase authentication error: $e");
-    }
-  }
-
-  // Render Google Sign-In Button
   Widget _buildGoogleSignInButton() {
     return ElevatedButton(
       onPressed: () async {
         try {
-          final googleUser = await _googleSignIn.signIn();
-          if (googleUser != null) {
-            _authenticateWithFirebase(googleUser);
-          }
+          await _authService.signInWithGoogle();
         } catch (e) {
           print("Google sign-in error: $e");
+          // Show error to user
         }
       },
       child: Text("Sign in with Google"),

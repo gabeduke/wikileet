@@ -19,27 +19,33 @@ class BatchAddGiftsScreen extends StatefulWidget {
 class _BatchAddGiftsScreenState extends State<BatchAddGiftsScreen> {
   final List<TextEditingController> _nameControllers = [];
   final List<TextEditingController> _descriptionControllers = [];
+  final List<TextEditingController> _urlControllers = []; // New
+  final List<TextEditingController> _categoryControllers = []; // New
 
-  // Function to add a new gift input field
   void _addGiftField() {
     setState(() {
       _nameControllers.add(TextEditingController());
       _descriptionControllers.add(TextEditingController());
+      _urlControllers.add(TextEditingController()); // New
+      _categoryControllers.add(TextEditingController()); // New
     });
   }
 
-  // Function to save all gifts at once
   Future<void> _saveGifts() async {
     final gifts = <Gift>[];
 
     for (var i = 0; i < _nameControllers.length; i++) {
       final name = _nameControllers[i].text;
       final description = _descriptionControllers[i].text;
+      final url = _urlControllers[i].text;
+      final category = _categoryControllers[i].text;
       if (name.isNotEmpty) {
         gifts.add(Gift(
           id: DateTime.now().millisecondsSinceEpoch.toString() + i.toString(),
           name: name,
           description: description,
+          url: url.isNotEmpty ? url : null,
+          category: category.isNotEmpty ? category : null,
           visibility: true,
           purchased: false,
           createdAt: Timestamp.now(),
@@ -61,6 +67,8 @@ class _BatchAddGiftsScreenState extends State<BatchAddGiftsScreen> {
   void dispose() {
     _nameControllers.forEach((controller) => controller.dispose());
     _descriptionControllers.forEach((controller) => controller.dispose());
+    _urlControllers.forEach((controller) => controller.dispose()); // New
+    _categoryControllers.forEach((controller) => controller.dispose()); // New
     super.dispose();
   }
 
@@ -78,19 +86,33 @@ class _BatchAddGiftsScreenState extends State<BatchAddGiftsScreen> {
               child: ListView.builder(
                 itemCount: _nameControllers.length,
                 itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: _nameControllers[index],
-                          decoration: InputDecoration(labelText: 'Gift Name'),
-                        ),
-                        TextFormField(
-                          controller: _descriptionControllers[index],
-                          decoration: InputDecoration(labelText: 'Description'),
-                        ),
-                      ],
+                  return Card(
+                    elevation: 2,
+                    margin: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _nameControllers[index],
+                            decoration: InputDecoration(labelText: 'Gift Name'),
+                            validator: (value) => value!.isEmpty ? 'Please enter a name' : null,
+                          ),
+                          TextFormField(
+                            controller: _descriptionControllers[index],
+                            decoration: InputDecoration(labelText: 'Description'),
+                          ),
+                          TextFormField(
+                            controller: _urlControllers[index],
+                            decoration: InputDecoration(labelText: 'URL'),
+                            keyboardType: TextInputType.url,
+                          ),
+                          TextFormField(
+                            controller: _categoryControllers[index],
+                            decoration: InputDecoration(labelText: 'Category'),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
