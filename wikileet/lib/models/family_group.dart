@@ -6,11 +6,13 @@ class FamilyGroup {
   final String id;
   final String name;
   final List<String> members;
+  final List<String> houseIds; // New field
 
   FamilyGroup({
     required this.id,
     required this.name,
     required this.members,
+    required this.houseIds, // Include in constructor
   });
 
   // Factory constructor for creating a FamilyGroup instance from Firestore
@@ -20,6 +22,7 @@ class FamilyGroup {
       id: doc.id,
       name: data['name'] ?? '',
       members: List<String>.from(data['members'] ?? []),
+      houseIds: List<String>.from(data['houseIds'] ?? []), // Retrieve houseIds
     );
   }
 
@@ -28,6 +31,7 @@ class FamilyGroup {
     return {
       'name': name,
       'members': members,
+      'houseIds': houseIds, // Include when saving
     };
   }
 }

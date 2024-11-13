@@ -35,10 +35,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userEmail = FirebaseAuth.instance.currentUser?.email ?? '';
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return ChangeNotifierProvider(
-      create: (_) => FamilyViewModel()..loadFamilyForUser(userEmail),
+      create: (_) => FamilyViewModel()..loadFamilyForUser(userId), // Pass userId instead of email
       child: Scaffold(
         appBar: AppBar(
           title: Text(_selectedIndex == 0 ? 'Family' : 'My Gift List'),

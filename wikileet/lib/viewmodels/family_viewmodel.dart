@@ -10,23 +10,32 @@ class FamilyViewModel with ChangeNotifier {
   final UserService _userService = UserService();
 
   String? familyId;
+  String? houseId;
   List<User> familyMembers = [];
+  List<User> houseMembers = [];
   bool isLoading = false;
-  String? errorMessage; // To store error messages
+  String? errorMessage;
 
-  // Load the family ID for the user by email
-  Future<void> loadFamilyForUser(String email) async {
+  Future<void> loadFamilyForUser(String userId) async {
     isLoading = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      familyId = await _familyService.getFamilyIdForUser(email);
+      final user = await _userService.getUserProfile(userId);
+      familyId = user?.familyGroupId;
+      houseId = user?.houseId;
+
       if (familyId != null) {
         await loadFamilyMembers();
       } else {
-        // No family ID found
         familyMembers = [];
+      }
+
+      if (houseId != null) {
+        await loadHouseMembers();
+      } else {
+        houseMembers = [];
       }
     } catch (e) {
       errorMessage = 'Failed to load family data.';
@@ -37,21 +46,12 @@ class FamilyViewModel with ChangeNotifier {
     }
   }
 
-  // Load family members with full profile details for the current family
   Future<void> loadFamilyMembers() async {
     try {
       if (familyId != null) {
         List<String> memberIds = await _familyService.getFamilyMembers(familyId!);
         familyMembers = await Future.wait(
-          memberIds.map((id) async {
-            try {
-              return await _userService.getUserProfile(id) ??
-                  User(uid: id, displayName: "Unknown", email: "");
-            } catch (e) {
-              print('Error fetching user profile for $id: $e');
-              return User(uid: id, displayName: "Unknown", email: "");
-            }
-          }),
+          memberIds.map((id) async => await _userService.getUserProfile(id) ?? User(uid: id, displayName: "Unknown", email: "")),
         );
       } else {
         familyMembers = [];
@@ -59,6 +59,22 @@ class FamilyViewModel with ChangeNotifier {
     } catch (e) {
       errorMessage = 'Failed to load family members.';
       print('Error in loadFamilyMembers: $e');
+    }
+  }
+
+  Future<void> loadHouseMembers() async {
+    try {
+      if (houseId != null && familyId != null) {
+        List<String> memberIds = await _familyService.getHouseMembers(familyId!, houseId!);
+        houseMembers = await Future.wait(
+          memberIds.map((id) async => await _userService.getUserProfile(id) ?? User(uid: id, displayName: "Unknown", email: "")),
+        );
+      } else {
+        houseMembers = [];
+      }
+    } catch (e) {
+      errorMessage = 'Failed to load house members.';
+      print('Error in loadHouseMembers: $e');
     }
   }
 }

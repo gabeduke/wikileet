@@ -7,6 +7,7 @@ class User {
   final String displayName;
   final String email;
   final String? familyGroupId;
+  final String? houseId; // New field
   final String? profilePicUrl;
 
   User({
@@ -14,6 +15,7 @@ class User {
     required this.displayName,
     required this.email,
     this.familyGroupId,
+    this.houseId, // Include in constructor
     this.profilePicUrl,
   });
 
@@ -25,6 +27,7 @@ class User {
       displayName: data['displayName'] ?? '',
       email: data['email'] ?? '',
       familyGroupId: data['familyGroupId'],
+      houseId: data['houseId'], // Retrieve houseId from Firestore
       profilePicUrl: data['profilePicUrl'],
     );
   }
@@ -34,6 +37,7 @@ class User {
       'displayName': displayName,
       'email': email,
       'familyGroupId': familyGroupId,
+      'houseId': houseId, // Include when saving to Firestore
       'profilePicUrl': profilePicUrl,
     };
   }

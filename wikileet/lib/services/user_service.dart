@@ -12,35 +12,52 @@ class UserService {
       : _firestore = firestore ?? FirebaseFirestore.instance,
         _auth = auth;
 
-  // Add UserProfile fetching functionality here
-  Future<User?> getUserProfile(String id) async {
-    try {
-      final DocumentSnapshot doc = await _firestore.collection('users').doc(id).get();
-      if (doc.exists) {
-        return User.fromJson(doc);  // Updated to use fromJson
-      } else {
-        throw Exception("User not found");
-      }
-    } catch (e) {
-      throw Exception("Failed to get user profile: $e");
+  Future<void> updateUserProfile(String userId, Map<String, dynamic> updates) async {
+    await _firestore.collection('users').doc(userId).update(updates);
+  }
+
+  Future<void> addUserIfNotExist(auth.User firebaseUser) async {
+    final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
+
+    // Force a fresh read from Firestore
+    final userDoc = await userDocRef.get(GetOptions(source: Source.server));
+
+    if (!userDoc.exists) {
+      // Prepare data for new user
+      final userData = {
+        'uid': firebaseUser.uid,
+        'displayName': firebaseUser.displayName ?? firebaseUser.email?.split('@').first ?? 'Unknown',
+        'email': firebaseUser.email ?? 'unknown@example.com',
+        'familyGroupId': null,
+        'profilePicUrl': firebaseUser.photoURL,
+      };
+
+      print("Creating new user in Firestore with data: $userData");
+
+      // Write user data to Firestore
+      await userDocRef.set(userData);
+      print("New user added to Firestore: ${firebaseUser.email}");
+    } else {
+      print("User already exists in Firestore: ${firebaseUser.email}");
     }
   }
 
-  Future<void> addUserIfNotExists(auth.User user) async {
-    final userDocRef = _firestore.collection('users').doc(user.uid);
-    final docSnapshot = await userDocRef.get();
 
-    if (!docSnapshot.exists) {
-      await userDocRef.set({
-        'uid': user.uid,
-        'displayName': user.displayName ?? user.email,
-        'email': user.email,
-        'familyGroupId': null, // Set this as needed
-        'profilePicUrl': user.photoURL,
-      });
-      print("User added to Firestore: ${user.email}");
-    } else {
-      print("User already exists in Firestore: ${user.email}");
+  Future<User?> getUserProfile(String userId) async {
+    try {
+      print('Attempting to fetch user profile for UID: $userId');
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+
+      if (userDoc.exists) {
+        print('User profile found in Firestore for UID: $userId');
+        return User.fromJson(userDoc); // Return the user if document exists
+      } else {
+        print('User not found in Firestore: $userId');
+        return null;
+      }
+    } catch (e) {
+      print('Failed to get user profile: $e');
+      throw Exception('Failed to get user profile: $e');
     }
   }
 

@@ -28,9 +28,6 @@ class GiftListScreen extends StatelessWidget {
       builder: (context, viewModel, child) {
         if (viewModel.gifts.isEmpty) {
           return Scaffold(
-            appBar: AppBar(
-              title: Text(viewModel.isOwner ? 'My Gift List' : 'Gift List'),
-            ),
             body: viewModel.giftsByCategory.isEmpty
                 ? Center(child: Text('No gifts found.'))
                 : ListView(

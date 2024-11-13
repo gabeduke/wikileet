@@ -5,42 +5,50 @@ import 'package:provider/provider.dart';
 import 'package:wikileet/viewmodels/family_viewmodel.dart';
 import 'package:wikileet/screens/gift_list_screen.dart';
 
+import 'package:wikileet/models/user.dart';
+
 class FamilyListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<FamilyViewModel>(
       builder: (context, familyViewModel, child) {
         if (familyViewModel.isLoading) {
-          // Show loading indicator while data is being fetched
           return Center(child: CircularProgressIndicator());
         } else if (familyViewModel.errorMessage != null) {
-          // Display error message if any
           return Center(child: Text(familyViewModel.errorMessage!));
-        } else if (familyViewModel.familyId == null) {
-          // No family found
-          return Center(child: Text("No family found."));
-        } else if (familyViewModel.familyMembers.isEmpty) {
-          // No family members in the family
-          return Center(child: Text("No family members found."));
-        } else {
-          // Display the list of family members
-          return ListView.builder(
-            itemCount: familyViewModel.familyMembers.length,
-            itemBuilder: (context, index) {
-              final familyMember = familyViewModel.familyMembers[index];
-              return ListTile(
-                title: Text(familyMember.displayName),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => GiftListScreen(userId: familyMember.uid),
-                    ),
-                  );
-                },
-              );
-            },
-          );
         }
+
+        return ListView(
+          children: [
+            if (familyViewModel.houseMembers.isNotEmpty) ...[
+              ListTile(
+                title: Text('My House'),
+                tileColor: Colors.grey[300],
+              ),
+              ...familyViewModel.houseMembers.map((member) => _buildMemberTile(context, member)),
+            ],
+            if (familyViewModel.familyMembers.isNotEmpty) ...[
+              ListTile(
+                title: Text('My Family'),
+                tileColor: Colors.grey[300],
+              ),
+              ...familyViewModel.familyMembers.map((member) => _buildMemberTile(context, member)),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMemberTile(BuildContext context, User member) {
+    return ListTile(
+      title: Text(member.displayName),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => GiftListScreen(userId: member.uid),
+          ),
+        );
       },
     );
   }
