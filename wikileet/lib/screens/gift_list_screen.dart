@@ -169,9 +169,6 @@ class GiftListScreen extends StatelessWidget {
           );
         } else {
           return Scaffold(
-            appBar: AppBar(
-              title: Text(viewModel.isOwner ? 'My Gift List' : 'Gift List'),
-            ),
             body: ListView(
               children: viewModel.giftsByCategory.entries.map((entry) {
                 final category = entry.key;
