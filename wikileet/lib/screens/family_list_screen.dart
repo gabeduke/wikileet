@@ -28,16 +28,20 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
                 tileColor: Colors.grey[300],
               ),
               ...familyViewModel.houseMembers.map((member) => _buildMemberTile(context, member)),
-            ],
+            ] else
+              ListTile(
+                title: Text('No house members found.'),
+              ),
             if (familyViewModel.familyMembers.isNotEmpty) ...[
               ListTile(
                 title: Text('My Family'),
                 tileColor: Colors.grey[300],
               ),
               ...familyViewModel.familyMembers.map((member) => _buildMemberTile(context, member)),
-            ],
-            if (familyViewModel.houseMembers.isEmpty && familyViewModel.familyMembers.isEmpty)
-              Center(child: Text('No family or house members found.')),
+            ] else
+              ListTile(
+                title: Text('No family members found.'),
+              ),
           ],
         );
       },

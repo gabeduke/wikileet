@@ -1,8 +1,7 @@
-// family_selection_screen.dart
+// lib/screens/family_selection_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:wikileet/services/family_service.dart';
-import 'package:wikileet/services/user_service.dart';
 import 'package:wikileet/models/family_group.dart';
 import 'package:wikileet/models/house.dart';
 import 'main_navigation_screen.dart';
@@ -18,7 +17,6 @@ class FamilySelectionScreen extends StatefulWidget {
 
 class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
   final FamilyService _familyService = FamilyService();
-  final UserService _userService = UserService();
 
   List<FamilyGroup> _familyGroups = [];
   String? _selectedFamilyGroupId;
@@ -42,14 +40,15 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
     setState(() {});
   }
 
+  /// Join the selected family group and house, ensuring bidirectional updates.
   Future<void> _joinFamilyGroup() async {
     if (_selectedFamilyGroupId == null) return;
 
-    // Update user's familyGroupId and houseId in Firestore
-    await _userService.updateUserProfile(widget.userId, {
-      'familyGroupId': _selectedFamilyGroupId,
-      'houseId': _selectedHouseId,
-    });
+    // Add the user to the selected family group and house (if chosen)
+    await _familyService.addMemberToFamilyGroup(_selectedFamilyGroupId!, widget.userId);
+    if (_selectedHouseId != null) {
+      await _familyService.addMemberToHouse(_selectedFamilyGroupId!, _selectedHouseId!, widget.userId);
+    }
 
     // Navigate to main screen
     Navigator.of(context).pushReplacement(

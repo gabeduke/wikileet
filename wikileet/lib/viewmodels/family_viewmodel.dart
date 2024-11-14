@@ -25,61 +25,84 @@ class FamilyViewModel with ChangeNotifier {
     return true; // Allow access for testing
   }
 
+  // Load family and house information associated with the current user.
   Future<void> loadFamilyForUser(String userId) async {
     print('Loading family for user: $userId');
     _setLoading(true);
 
     try {
+      // Fetch user profile to get family and house IDs
       final user = await _userService.getUserProfile(userId);
       familyId = user?.familyGroupId;
       houseId = user?.houseId;
 
-      // Load members based on availability of familyId and houseId
-      await Future.wait([
-        if (familyId != null) loadFamilyMembers(),
-        if (houseId != null) loadHouseMembers(),
-      ]);
-
-      print('Family ID: $familyId, House ID: $houseId');
+      if (familyId != null) await loadFamilyMembers();
+      if (houseId != null) await loadHouseMembers();
     } catch (e) {
-      errorMessage = 'Failed to load family data.';
-      print('Error in loadFamilyForUser: $e');
+      errorMessage = 'Failed to load family data: $e';
+      print(errorMessage);
     } finally {
       _setLoading(false);
     }
   }
 
+  /// Select a family group and optionally a house for the user, updating Firestore.
+  Future<void> selectFamilyAndHouse(String userId, String familyGroupId, String? houseId) async {
+    _setLoading(true);
+    try {
+      await _familyService.setFamilyAndHouseForUser(userId, familyGroupId, houseId);
+
+      // Update local family and house IDs
+      familyId = familyGroupId;
+      this.houseId = houseId;
+
+      await loadFamilyMembers();
+      if (houseId != null) await loadHouseMembers();
+
+      notifyListeners();
+    } catch (e) {
+      errorMessage = 'Failed to select family and house: $e';
+      print(errorMessage);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Load members for the family group.
   Future<void> loadFamilyMembers() async {
+    if (familyId == null) return;
+
     try {
-      if (familyId != null) {
-        final memberIds = await _familyService.getFamilyMembers(familyId!);
-        familyMembers = await _fetchUsersByIds(memberIds);
-      } else {
-        familyMembers = [];
-      }
+      final memberIds = await _familyService.getFamilyMembers(familyId!);
+      familyMembers = await _fetchUsersByIds(memberIds);
+      notifyListeners();
     } catch (e) {
-      errorMessage = 'Failed to load family members.';
-      print('Error in loadFamilyMembers: $e');
+      errorMessage = 'Failed to load family members: $e';
+      print(errorMessage);
+      familyMembers = [];
     }
   }
 
+  /// Load members for the specific house within the family group.
   Future<void> loadHouseMembers() async {
+    if (familyId == null || houseId == null) return;
+
     try {
-      if (houseId != null && familyId != null) {
-        final memberIds = await _familyService.getHouseMembers(familyId!, houseId!);
-        houseMembers = await _fetchUsersByIds(memberIds);
-      } else {
-        houseMembers = [];
-      }
+      final memberIds = await _familyService.getHouseMembers(familyId!, houseId!);
+      houseMembers = await _fetchUsersByIds(memberIds);
+      notifyListeners();
     } catch (e) {
-      errorMessage = 'Failed to load house members.';
-      print('Error in loadHouseMembers: $e');
+      errorMessage = 'Failed to load house members: $e';
+      print(errorMessage);
+      houseMembers = [];
     }
   }
 
+  /// Helper to fetch users by a list of IDs.
   Future<List<User>> _fetchUsersByIds(List<String> userIds) async {
     return await Future.wait(userIds.map((id) async {
-      return await _userService.getUserProfile(id) ?? User(uid: id, displayName: "Unknown", email: "");
+      return await _userService.getUserProfile(id) ??
+          User(uid: id, displayName: "Unknown", email: "");
     }));
   }
 
@@ -89,7 +112,8 @@ class FamilyViewModel with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addMemberToHouse(String familyGroupId, String houseId, String userId) async {
+  Future<void> addMemberToHouse(
+      String familyGroupId, String houseId, String userId) async {
     await _familyService.addMemberToHouse(familyGroupId, houseId, userId);
     await loadHouseMembers();
     notifyListeners();
@@ -128,7 +152,8 @@ class FamilyViewModel with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateHouse(String familyGroupId, String houseId, String newName) async {
+  Future<void> updateHouse(
+      String familyGroupId, String houseId, String newName) async {
     await _familyService.updateHouseName(familyGroupId, houseId, newName);
     notifyListeners();
   }

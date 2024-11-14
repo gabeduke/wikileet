@@ -7,6 +7,105 @@ import 'package:wikileet/models/house.dart';
 class FamilyService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  /// Set the family and house for a user, updating both the user and family/house documents.
+  Future<void> setFamilyAndHouseForUser(String userId, String familyGroupId, String? houseId) async {
+    final userRef = _firestore.collection('users').doc(userId);
+    final familyGroupRef = _firestore.collection('family_groups').doc(familyGroupId);
+
+    await _firestore.runTransaction((transaction) async {
+      // Update the user's familyGroupId and houseId
+      transaction.update(userRef, {
+        'familyGroupId': familyGroupId,
+        'houseId': houseId,
+      });
+
+      // Add user ID to the family group members array
+      transaction.update(familyGroupRef, {
+        'members': FieldValue.arrayUnion([userId]),
+      });
+
+      if (houseId != null) {
+        // Update the house document to include the user as a member
+        final houseRef = familyGroupRef.collection('houses').doc(houseId);
+        transaction.update(houseRef, {
+          'members': FieldValue.arrayUnion([userId]),
+        });
+      }
+    });
+  }
+
+  /// Add a member to a family group and update both the User and FamilyGroup records.
+  Future<void> addMemberToFamilyGroup(String familyGroupId, String userId) async {
+    final familyGroupRef = _firestore.collection('family_groups').doc(familyGroupId);
+    final userRef = _firestore.collection('users').doc(userId);
+
+    await _firestore.runTransaction((transaction) async {
+      // Add user ID to the family group members array
+      transaction.update(familyGroupRef, {
+        'members': FieldValue.arrayUnion([userId]),
+      });
+
+      // Update the user's familyGroupId field
+      transaction.update(userRef, {'familyGroupId': familyGroupId});
+    });
+  }
+
+  /// Remove a member from a family group and update both the User and FamilyGroup records.
+  Future<void> removeMemberFromFamilyGroup(String familyGroupId, String userId) async {
+    final familyGroupRef = _firestore.collection('family_groups').doc(familyGroupId);
+    final userRef = _firestore.collection('users').doc(userId);
+
+    await _firestore.runTransaction((transaction) async {
+      // Remove user ID from the family group members array
+      transaction.update(familyGroupRef, {
+        'members': FieldValue.arrayRemove([userId]),
+      });
+
+      // Clear the user's familyGroupId field
+      transaction.update(userRef, {'familyGroupId': null});
+    });
+  }
+
+  /// Add a member to a house and update both the User and House records.
+  Future<void> addMemberToHouse(String familyGroupId, String houseId, String userId) async {
+    final houseRef = _firestore
+        .collection('family_groups')
+        .doc(familyGroupId)
+        .collection('houses')
+        .doc(houseId);
+    final userRef = _firestore.collection('users').doc(userId);
+
+    await _firestore.runTransaction((transaction) async {
+      // Add user ID to the house members array
+      transaction.update(houseRef, {
+        'members': FieldValue.arrayUnion([userId]),
+      });
+
+      // Update the user's houseId field
+      transaction.update(userRef, {'houseId': houseId});
+    });
+  }
+
+  /// Remove a member from a house and update both the User and House records.
+  Future<void> removeMemberFromHouse(String familyGroupId, String houseId, String userId) async {
+    final houseRef = _firestore
+        .collection('family_groups')
+        .doc(familyGroupId)
+        .collection('houses')
+        .doc(houseId);
+    final userRef = _firestore.collection('users').doc(userId);
+
+    await _firestore.runTransaction((transaction) async {
+      // Remove user ID from the house members array
+      transaction.update(houseRef, {
+        'members': FieldValue.arrayRemove([userId]),
+      });
+
+      // Clear the user's houseId field
+      transaction.update(userRef, {'houseId': null});
+    });
+  }
+
   /// Fetches the family ID for a user by their email address.
   Future<String?> getFamilyIdForUser(String email) async {
     try {
@@ -55,33 +154,6 @@ class FamilyService {
     }
   }
 
-  /// Adds a user ID to a specified family group as a member.
-  Future<void> addMemberToFamilyGroup(String familyGroupId, String userId) async {
-    try {
-      final familyGroupRef = _firestore.collection('family_groups').doc(familyGroupId);
-      await familyGroupRef.update({
-        'members': FieldValue.arrayUnion([userId]),
-      });
-    } catch (e) {
-      print("Error adding member to family group $familyGroupId: $e");
-    }
-  }
-
-  /// Adds a user ID to a specified house within a family group.
-  Future<void> addMemberToHouse(String familyGroupId, String houseId, String userId) async {
-    try {
-      final houseRef = _firestore
-          .collection('family_groups')
-          .doc(familyGroupId)
-          .collection('houses')
-          .doc(houseId);
-      await houseRef.update({
-        'members': FieldValue.arrayUnion([userId]),
-      });
-    } catch (e) {
-      print("Error adding member to house $houseId in family group $familyGroupId: $e");
-    }
-  }
 
   /// Retrieves a list of family member user IDs for a specified family.
   Future<List<String>> getFamilyMembers(String familyId) async {
