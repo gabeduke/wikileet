@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:provider/provider.dart'; // Import Provider
+import 'package:provider/provider.dart';
 import 'package:wikileet/screens/admin.dart';
 import 'package:wikileet/screens/family_list_screen.dart';
 import 'package:wikileet/screens/gift_list_screen.dart';
@@ -19,12 +18,30 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   final AuthService _authService = AuthService();
 
-  // Screens for each tab
-  final List<Widget> _screens = [
-    FamilyListScreen(),
-    GiftListScreen(userId: FirebaseAuth.instance.currentUser?.uid ?? ''),
-    AdminInterfaceScreen(viewModel: FamilyViewModel())
-  ];
+  bool _isAdmin = false;
+  List<Widget> _screens = []; // Initialize with an empty list
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdminStatus();
+  }
+
+  Future<void> _checkAdminStatus() async {
+    final isAdmin = await Provider.of<FamilyViewModel>(context, listen: false).checkAdminAuthorization();
+    setState(() {
+      _isAdmin = isAdmin;
+      _screens = _buildScreens(); // Update screens with admin check
+    });
+  }
+
+  List<Widget> _buildScreens() {
+    return [
+      FamilyListScreen(),
+      GiftListScreen(userId: FirebaseAuth.instance.currentUser?.uid ?? ''),
+      if (_isAdmin) AdminInterfaceScreen(),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -39,39 +56,40 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    // Render loading indicator until `_screens` is fully initialized
+    if (_screens.isEmpty) {
+      return Center(child: CircularProgressIndicator());
+    }
 
-    return ChangeNotifierProvider(
-      create: (_) => FamilyViewModel()..loadFamilyForUser(userId), // Pass userId instead of email
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(_selectedIndex == 0 ? 'Family' : 'My Gift List'),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.logout),
-              onPressed: _signOut
-            ),
-          ],
-        ),
-        body: _screens[_selectedIndex],
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          items: const [
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_selectedIndex == 0 ? 'Family' : _selectedIndex == 1 ? 'My Gift List' : 'Admin'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: _signOut,
+          ),
+        ],
+      ),
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.group),
+            label: 'Family',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list),
+            label: 'My Gift List',
+          ),
+          if (_isAdmin)
             BottomNavigationBarItem(
-              icon: Icon(Icons.group),
-              label: 'Family',
+              icon: Icon(Icons.admin_panel_settings),
+              label: 'Admin',
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.list),
-              label: 'My Gift List',
-            ),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.admin_panel_settings),
-                label: 'Admin' // Add an Admin tab
-            )
-          ],
-        ),
+        ],
       ),
     );
   }

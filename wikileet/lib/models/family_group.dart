@@ -1,18 +1,21 @@
 // lib/models/family_group.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:wikileet/models/house.dart';
 
 class FamilyGroup {
   final String id;
   final String name;
   final List<String> members;
-  final List<String> houseIds; // New field
+  late final List<String> houseIds; // New field
+  List<House> houses;
 
   FamilyGroup({
     required this.id,
     required this.name,
     required this.members,
-    required this.houseIds, // Include in constructor
+    required this.houseIds,
+    this.houses = const [],
   });
 
   // Factory constructor for creating a FamilyGroup instance from Firestore

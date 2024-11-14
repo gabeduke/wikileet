@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:wikileet/providers/user_provider.dart';
-import 'package:wikileet/services/auth_service.dart'; // Import AuthService
-import 'package:wikileet/services/navigation_service.dart';
+import 'package:wikileet/viewmodels/family_viewmodel.dart';
+import 'package:wikileet/services/auth_service.dart';
 import 'firebase_options.dart';
 import 'wrapper.dart';
 
@@ -16,27 +16,24 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Instantiate AuthService
+  // Instantiate necessary services and providers
   final authService = AuthService();
-  final navigationService = NavigationService();
-
-  // Instantiate UserProvider
   final userProvider = UserProvider();
 
-  // Check for an existing authenticated user and set userId
+  // Set initial userId if a user is already authenticated
   final currentUser = authService.getCurrentUser();
   if (currentUser != null) {
     userProvider.setUserId(currentUser.uid);
   }
 
-  // Start listening for auth state changes
+  // Listen for auth changes and update UserProvider
   authService.listenToAuthChanges(userProvider);
-  navigationService.listenToAuthChanges(userProvider);
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => userProvider),
+        ChangeNotifierProvider(create: (_) => FamilyViewModel()),
       ],
       child: MyApp(),
     ),
@@ -50,10 +47,9 @@ class MyApp extends StatelessWidget {
       title: 'Gift List App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        // Define text themes, button themes, etc.
       ),
-      home: Wrapper(),
       navigatorKey: navigatorKey,
+      home: Wrapper(),
     );
   }
 }

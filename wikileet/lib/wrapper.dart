@@ -12,13 +12,15 @@ class Wrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(), // Listen to auth state changes
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          // Show a loading spinner
-          return Center(child: CircularProgressIndicator());
+          // Show a loading spinner in a full scaffold for consistency
+          return Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         } else if (snapshot.hasData) {
-          // User is signed in
-          return MainNavigationScreen(); // Load MainNavigationScreen
+          // User is signed in, navigate to MainNavigationScreen
+          return MainNavigationScreen();
         } else {
-          // User is not signed in
+          // User is not signed in, show LoginScreen
           return LoginScreen();
         }
       },

@@ -16,31 +16,37 @@ class FamilyViewModel with ChangeNotifier {
   String? houseId;
   List<User> familyMembers = [];
   List<User> houseMembers = [];
+  List<FamilyGroup> familyGroups = [];
+  List<House> houses = [];
   bool isLoading = false;
   String? errorMessage;
+  bool _isDataLoaded = false;
 
   // Admin authorization check (placeholder, implement actual logic)
   Future<bool> checkAdminAuthorization() async {
     // Replace with actual authorization check, e.g., verify user role
-    return true; // Allow access for testing
+    return _userService.isGlobalAdmin() ;
   }
 
   // Load family and house information associated with the current user.
+  // Only loads family data if not already loaded
   Future<void> loadFamilyForUser(String userId) async {
-    print('Loading family for user: $userId');
+    if (_isDataLoaded) return; // Prevent redundant loads
     _setLoading(true);
 
     try {
-      // Fetch user profile to get family and house IDs
       final user = await _userService.getUserProfile(userId);
-      familyId = user?.familyGroupId;
-      houseId = user?.houseId;
+      if (user == null) return; // Handle missing user profile
+
+      familyId = user.familyGroupId;
+      houseId = user.houseId;
 
       if (familyId != null) await loadFamilyMembers();
       if (houseId != null) await loadHouseMembers();
+
+      _isDataLoaded = true; // Mark data as loaded
     } catch (e) {
       errorMessage = 'Failed to load family data: $e';
-      print(errorMessage);
     } finally {
       _setLoading(false);
     }
@@ -121,15 +127,42 @@ class FamilyViewModel with ChangeNotifier {
 
   void _setLoading(bool value) {
     isLoading = value;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
   }
 
-  Future<List<FamilyGroup>> getFamilyGroups() async {
-    return await _familyService.getAllFamilyGroups();
+  Future<void> getFamilyGroups() async {
+    // Prevent repeated fetches if data is already loaded
+    if (familyGroups.isNotEmpty) return;
+
+    print("Starting getFamilyGroups");
+    _setLoading(true);
+
+    try {
+      // Fetch family groups and associated houses
+      familyGroups = await _familyService.getAllFamilyGroups();
+      print("Fetched family groups: ${familyGroups.length}");
+
+      // Load houses for each family group
+      for (FamilyGroup family in familyGroups) {
+        family.houses = await _familyService.getHousesForFamilyGroup(family.id);
+        print("Fetched houses for family group ${family.id}: ${family.houses.length}");
+      }
+
+    } catch (e) {
+      errorMessage = 'Failed to load family groups: $e';
+      print(errorMessage);
+    } finally {
+      _setLoading(false);
+      notifyListeners();
+      print("getFamilyGroups completed");
+    }
   }
+
+
+
 
   Future<List<House>> getHouses(String familyGroupId) async {
-    return await _familyService.getHousesForFamilyGroup(familyGroupId);
+    return houses = await _familyService.getHousesForFamilyGroup(familyGroupId);
   }
 
   Future<void> deleteFamilyGroup(String familyGroupId) async {
@@ -155,6 +188,13 @@ class FamilyViewModel with ChangeNotifier {
   Future<void> updateHouse(
       String familyGroupId, String houseId, String newName) async {
     await _familyService.updateHouseName(familyGroupId, houseId, newName);
+    notifyListeners();
+  }
+
+  void resetData() {
+    _isDataLoaded = false; // Allow reloading data if reset
+    familyGroups.clear();
+    houseMembers.clear();
     notifyListeners();
   }
 }

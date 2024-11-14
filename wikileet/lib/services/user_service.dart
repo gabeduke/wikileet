@@ -6,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:wikileet/models/user.dart';
 
+import '../providers/user_provider.dart';
+
 class UserService {
   final FirebaseFirestore _firestore;
   final auth.FirebaseAuth? _auth;
@@ -15,6 +17,15 @@ class UserService {
   UserService({FirebaseFirestore? firestore, auth.FirebaseAuth? auth})
       : _firestore = firestore ?? FirebaseFirestore.instance,
         _auth = auth;
+
+  Future<bool> isGlobalAdmin() async {
+    final user = _auth?.currentUser;
+    if (user == null) return false;
+
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final userData = userDoc.data();
+    return userData?['isGlobalAdmin'] ?? false;
+  }
 
   Future<void> updateUserProfile(String userId, Map<String, dynamic> updates) async {
     await _firestore.collection('users').doc(userId).update(updates);

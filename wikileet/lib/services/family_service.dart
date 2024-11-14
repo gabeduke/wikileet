@@ -34,39 +34,38 @@ class FamilyService {
     });
   }
 
-  /// Add a member to a family group and update both the User and FamilyGroup records.
+  /// Adds a member to the specified family group and updates the user's familyGroupId.
   Future<void> addMemberToFamilyGroup(String familyGroupId, String userId) async {
     final familyGroupRef = _firestore.collection('family_groups').doc(familyGroupId);
     final userRef = _firestore.collection('users').doc(userId);
 
     await _firestore.runTransaction((transaction) async {
-      // Add user ID to the family group members array
+      // Use arrayUnion to add userId to family group's members array
       transaction.update(familyGroupRef, {
         'members': FieldValue.arrayUnion([userId]),
       });
 
-      // Update the user's familyGroupId field
+      // Update user's familyGroupId field
       transaction.update(userRef, {'familyGroupId': familyGroupId});
     });
   }
 
-  /// Remove a member from a family group and update both the User and FamilyGroup records.
+  /// Removes a member from the specified family group and clears the user's familyGroupId.
   Future<void> removeMemberFromFamilyGroup(String familyGroupId, String userId) async {
     final familyGroupRef = _firestore.collection('family_groups').doc(familyGroupId);
     final userRef = _firestore.collection('users').doc(userId);
 
     await _firestore.runTransaction((transaction) async {
-      // Remove user ID from the family group members array
+      // Use arrayRemove to delete userId from family group's members array
       transaction.update(familyGroupRef, {
         'members': FieldValue.arrayRemove([userId]),
       });
 
-      // Clear the user's familyGroupId field
       transaction.update(userRef, {'familyGroupId': null});
     });
   }
 
-  /// Add a member to a house and update both the User and House records.
+  /// Adds a member to a house within a family group.
   Future<void> addMemberToHouse(String familyGroupId, String houseId, String userId) async {
     final houseRef = _firestore
         .collection('family_groups')
@@ -76,12 +75,10 @@ class FamilyService {
     final userRef = _firestore.collection('users').doc(userId);
 
     await _firestore.runTransaction((transaction) async {
-      // Add user ID to the house members array
       transaction.update(houseRef, {
         'members': FieldValue.arrayUnion([userId]),
       });
 
-      // Update the user's houseId field
       transaction.update(userRef, {'houseId': houseId});
     });
   }

@@ -7,15 +7,17 @@ class User {
   final String displayName;
   final String email;
   final String? familyGroupId;
-  final String? houseId; // New field
+  final String? houseId;
   final String? profilePicUrl;
+  final bool isFamilyAdmin = false;
+  final bool isGlobalAdmin = false;
 
   User({
     required this.uid,
     required this.displayName,
     required this.email,
     this.familyGroupId,
-    this.houseId, // Include in constructor
+    this.houseId,
     this.profilePicUrl,
   });
 
