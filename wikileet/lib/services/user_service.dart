@@ -1,5 +1,7 @@
 // lib/services/user_service.dart
 
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:wikileet/models/user.dart';
@@ -7,6 +9,8 @@ import 'package:wikileet/models/user.dart';
 class UserService {
   final FirebaseFirestore _firestore;
   final auth.FirebaseAuth? _auth;
+  User? _cachedUser; // Cache the user to prevent duplicate calls
+  bool _isFetchingProfile = false; // Prevent concurrent fetches
 
   UserService({FirebaseFirestore? firestore, auth.FirebaseAuth? auth})
       : _firestore = firestore ?? FirebaseFirestore.instance,
@@ -44,13 +48,27 @@ class UserService {
 
 
   Future<User?> getUserProfile(String userId) async {
+    // Return cached user if available
+    if (_cachedUser != null && _cachedUser!.uid == userId) {
+      print('Returning cached user profile for UID: $userId');
+      return _cachedUser;
+    }
+
+    // Prevent concurrent fetches
+    if (_isFetchingProfile) {
+      print('Already fetching profile for UID: $userId. Returning null.');
+      return null;
+    }
+
+    _isFetchingProfile = true;
     try {
       print('Attempting to fetch user profile for UID: $userId');
       final userDoc = await _firestore.collection('users').doc(userId).get();
 
       if (userDoc.exists) {
         print('User profile found in Firestore for UID: $userId');
-        return User.fromJson(userDoc); // Return the user if document exists
+        _cachedUser = User.fromJson(userDoc); // Cache the result
+        return _cachedUser;
       } else {
         print('User not found in Firestore: $userId');
         return null;
@@ -58,8 +76,11 @@ class UserService {
     } catch (e) {
       print('Failed to get user profile: $e');
       throw Exception('Failed to get user profile: $e');
+    } finally {
+      _isFetchingProfile = false; // Reset fetching state
     }
   }
+
 
   Future<void> addUser(User user) async {
     await _firestore.collection('users').doc(user.uid).set(user.toJson());

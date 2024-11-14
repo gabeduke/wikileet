@@ -8,6 +8,21 @@ class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
   final UserService _userService = UserService();
 
+  User? getCurrentUser() {
+    return _auth.currentUser;
+  }
+
+  // Listen to auth state changes and update UserProvider accordingly
+  void listenToAuthChanges(UserProvider userProvider) {
+    _auth.authStateChanges().listen((User? user) {
+      if (user != null) {
+        userProvider.setUserId(user.uid);
+      } else {
+        userProvider.clearUserId();
+      }
+    });
+  }
+
   // Sign-in with Google, set userId in UserProvider, and return the authenticated user
   Future<User?> signInWithGoogle(UserProvider userProvider) async {
     try {
@@ -39,7 +54,7 @@ class AuthService {
   }
 
   // Sign out from Firebase and Google
-  Future<void> signOut() async {
+  Future<void> signOut(UserProvider userProvider) async {
     await _auth.signOut();
     await _googleSignIn.signOut();
   }

@@ -7,6 +7,9 @@ import 'package:wikileet/screens/family_list_screen.dart';
 import 'package:wikileet/screens/gift_list_screen.dart';
 import 'package:wikileet/viewmodels/family_viewmodel.dart';
 
+import '../providers/user_provider.dart';
+import '../services/auth_service.dart';
+
 class MainNavigationScreen extends StatefulWidget {
   @override
   _MainNavigationScreenState createState() => _MainNavigationScreenState();
@@ -14,8 +17,7 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final AuthService _authService = AuthService();
 
   // Screens for each tab
   final List<Widget> _screens = [
@@ -31,8 +33,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Future<void> _signOut() async {
-    await _auth.signOut();
-    await _googleSignIn.signOut();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await _authService.signOut(userProvider);
   }
 
   @override
@@ -47,7 +49,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           actions: [
             IconButton(
               icon: Icon(Icons.logout),
-              onPressed: _signOut,
+              onPressed: _signOut
             ),
           ],
         ),

@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wikileet/viewmodels/family_viewmodel.dart';
 import 'package:wikileet/screens/gift_list_screen.dart';
-import 'package:wikileet/services/navigation_service.dart';
 import 'package:wikileet/models/user.dart';
-
-import '../providers/user_provider.dart';
 
 class FamilyListScreen extends StatefulWidget {
   @override
@@ -13,31 +10,6 @@ class FamilyListScreen extends StatefulWidget {
 }
 
 class _FamilyListScreenState extends State<FamilyListScreen> {
-  final NavigationService _navigationService = NavigationService();
-  String? _lastUserId; // Track the last userId to detect changes
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    // Access UserProvider and listen to changes in userId
-    final userProvider = Provider.of<UserProvider>(context);
-
-    if (userProvider.userId != _lastUserId) {
-      _lastUserId = userProvider.userId;  // Update lastUserId
-      _checkFamilyGroup(userProvider.userId);
-    }
-  }
-
-  Future<void> _checkFamilyGroup(String? userId) async {
-    print("Inside _checkFamilyGroup method");
-
-    if (userId != null) {
-      print("Running family group check for user ID: $userId");
-      await _navigationService.checkFamilyGroupAndNavigate(userId);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<FamilyViewModel>(
@@ -64,6 +36,8 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
               ),
               ...familyViewModel.familyMembers.map((member) => _buildMemberTile(context, member)),
             ],
+            if (familyViewModel.houseMembers.isEmpty && familyViewModel.familyMembers.isEmpty)
+              Center(child: Text('No family or house members found.')),
           ],
         );
       },
