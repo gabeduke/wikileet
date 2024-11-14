@@ -13,15 +13,7 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAuthorization(); // Check if the user is authorized to view the page
     Provider.of<FamilyViewModel>(context, listen: false).getFamilyGroups(); // Load family groups
-  }
-
-  Future<void> _checkAuthorization() async {
-    final isAuthorized = await Provider.of<FamilyViewModel>(context, listen: false).checkAdminAuthorization();
-    if (!isAuthorized) {
-      Navigator.of(context).pop();
-    }
   }
 
   @override

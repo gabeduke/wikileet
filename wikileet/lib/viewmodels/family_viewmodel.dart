@@ -23,9 +23,9 @@ class FamilyViewModel with ChangeNotifier {
   bool _isDataLoaded = false;
 
   // Admin authorization check (placeholder, implement actual logic)
-  Future<bool> checkAdminAuthorization() async {
+  Future<bool> checkAdminAuthorization(userId) async {
     // Replace with actual authorization check, e.g., verify user role
-    return _userService.isGlobalAdmin() ;
+    return _userService.isGlobalAdmin(userId) ;
   }
 
   // Load family and house information associated with the current user.

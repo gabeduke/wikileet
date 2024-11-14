@@ -18,13 +18,15 @@ class UserService {
       : _firestore = firestore ?? FirebaseFirestore.instance,
         _auth = auth;
 
-  Future<bool> isGlobalAdmin() async {
-    final user = _auth?.currentUser;
-    if (user == null) return false;
-
-    final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    final userData = userDoc.data();
-    return userData?['isGlobalAdmin'] ?? false;
+  Future<bool> isGlobalAdmin(String userId) async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      final userData = userDoc.data();
+      return userData?['isGlobalAdmin'] ?? false;
+    } catch (e) {
+      print("Error checking isGlobalAdmin for userId $userId: $e");
+      return false;
+    }
   }
 
   Future<void> updateUserProfile(String userId, Map<String, dynamic> updates) async {

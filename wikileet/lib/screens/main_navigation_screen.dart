@@ -28,7 +28,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Future<void> _checkAdminStatus() async {
-    final isAdmin = await Provider.of<FamilyViewModel>(context, listen: false).checkAdminAuthorization();
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+    final isAdmin = await Provider.of<FamilyViewModel>(context, listen: false).checkAdminAuthorization(userId);
     setState(() {
       _isAdmin = isAdmin;
       _screens = _buildScreens(); // Update screens with admin check

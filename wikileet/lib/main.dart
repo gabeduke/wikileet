@@ -1,4 +1,5 @@
 // lib/main.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -12,33 +13,39 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  // Instantiate necessary services and providers
-  final authService = AuthService();
-  final userProvider = UserProvider();
-
-  // Set initial userId if a user is already authenticated
-  final currentUser = authService.getCurrentUser();
-  if (currentUser != null) {
-    userProvider.setUserId(currentUser.uid);
-  }
-
-  // Listen for auth changes and update UserProvider
-  authService.listenToAuthChanges(userProvider);
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => userProvider),
-        ChangeNotifierProvider(create: (_) => FamilyViewModel()),
-      ],
-      child: MyApp(),
+    StreamBuilder(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        final authService = AuthService();
+        final userProvider = UserProvider();
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasData) {
+          // If there’s an authenticated user, set their userId
+          final currentUser = authService.getCurrentUser();
+          if (currentUser != null) {
+            userProvider.setUserId(currentUser.uid);
+          }
+        }
+
+        authService.listenToAuthChanges(userProvider);
+
+        return MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => userProvider),
+            ChangeNotifierProvider(create: (_) => FamilyViewModel()),
+          ],
+          child: MyApp(),
+        );
+      },
     ),
   );
 }
+
 
 class MyApp extends StatelessWidget {
   @override
