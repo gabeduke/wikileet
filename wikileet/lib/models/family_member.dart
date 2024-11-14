@@ -14,6 +14,8 @@ class FamilyMember {
     );
   }
 
+  get name => displayName;
+
   // Convert FamilyMember instance to Firestore-compatible JSON
   Map<String, dynamic> toFirestore() {
     return {

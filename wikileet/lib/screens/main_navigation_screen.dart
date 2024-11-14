@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart'; // Import Provider
+import 'package:wikileet/screens/admin.dart';
 import 'package:wikileet/screens/family_list_screen.dart';
 import 'package:wikileet/screens/gift_list_screen.dart';
 import 'package:wikileet/viewmodels/family_viewmodel.dart';
@@ -20,6 +21,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = [
     FamilyListScreen(),
     GiftListScreen(userId: FirebaseAuth.instance.currentUser?.uid ?? ''),
+    AdminInterfaceScreen(viewModel: FamilyViewModel())
   ];
 
   void _onItemTapped(int index) {
@@ -53,7 +55,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
-          items: [
+          items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.group),
               label: 'Family',
@@ -62,6 +64,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               icon: Icon(Icons.list),
               label: 'My Gift List',
             ),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.admin_panel_settings),
+                label: 'Admin' // Add an Admin tab
+            )
           ],
         ),
       ),

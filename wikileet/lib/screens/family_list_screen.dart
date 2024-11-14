@@ -1,11 +1,11 @@
-// lib/screens/family_list_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wikileet/viewmodels/family_viewmodel.dart';
 import 'package:wikileet/screens/gift_list_screen.dart';
-import 'package:wikileet/services/navigation_service.dart'; // Import NavigationService
+import 'package:wikileet/services/navigation_service.dart';
 import 'package:wikileet/models/user.dart';
+
+import '../providers/user_provider.dart';
 
 class FamilyListScreen extends StatefulWidget {
   @override
@@ -13,20 +13,24 @@ class FamilyListScreen extends StatefulWidget {
 }
 
 class _FamilyListScreenState extends State<FamilyListScreen> {
-  final NavigationService _navigationService = NavigationService(); // Initialize NavigationService
+  final NavigationService _navigationService = NavigationService();
+  String? _lastUserId; // Track the last userId to detect changes
 
   @override
-  void initState() {
-    super.initState();
-    print("FamilyListScreen initState called");
-    _checkFamilyGroup();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Access UserProvider and listen to changes in userId
+    final userProvider = Provider.of<UserProvider>(context);
+
+    if (userProvider.userId != _lastUserId) {
+      _lastUserId = userProvider.userId;  // Update lastUserId
+      _checkFamilyGroup(userProvider.userId);
+    }
   }
 
-  Future<void> _checkFamilyGroup() async {
-    print("Inside _checkFamilyGroup method"); // Add this log
-
-    // Get the current user ID from the provider, Firebase, or other source
-    final userId = Provider.of<FamilyViewModel>(context, listen: false).currentUserId;
+  Future<void> _checkFamilyGroup(String? userId) async {
+    print("Inside _checkFamilyGroup method");
 
     if (userId != null) {
       print("Running family group check for user ID: $userId");

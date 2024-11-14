@@ -85,4 +85,20 @@ class FamilyService {
     final data = doc.data();
     return List<String>.from(data?['members'] ?? []);
   }
+
+  addFamilyGroup(String name) {
+    _firestore.collection('family_groups').add({
+      'name': name,
+      'members': [],
+    });
+  }
+
+  addHouse(String id, String name) async {
+    final familyGroupRef = _firestore.collection('family_groups').doc(id);
+    final houseRef = familyGroupRef.collection('houses').doc();
+    await houseRef.set({
+      'name': name,
+      'members': [],
+    });
+  }
 }

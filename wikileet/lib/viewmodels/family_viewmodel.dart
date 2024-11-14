@@ -3,7 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:wikileet/services/family_service.dart';
 import 'package:wikileet/services/user_service.dart';
-import 'package:wikileet/models/user.dart'; // Assuming a User model exists
+import 'package:wikileet/models/user.dart';
+
+import '../models/family_group.dart';
+import '../models/family_member.dart';
+import '../models/house.dart'; // Assuming a User model exists
 
 class FamilyViewModel with ChangeNotifier {
   final FamilyService _familyService = FamilyService();
@@ -78,4 +82,48 @@ class FamilyViewModel with ChangeNotifier {
       print('Error in loadHouseMembers: $e');
     }
   }
+
+  Future<List<FamilyGroup>> getFamilyGroups() async {
+    return await _familyService.getAllFamilyGroups();
+  }
+
+  Future<List<House>> getHouses(String id) async {
+    return await _familyService.getHousesForFamilyGroup(id);
+  }
+
+  void updateHouse(String id, String id2, String newName) async {
+    await _familyService.addMemberToHouse(id, id2, newName);
+    loadHouseMembers();
+  }
+
+  deleteHouse(String id, String id2) async {
+    await _familyService.addMemberToHouse(id, id2, "");
+    loadHouseMembers();
+  }
+
+  void addHouse(String id, String name) async {
+    await _familyService.addHouse(id, name);
+    loadHouseMembers();
+}
+
+  void updateMember(String id, String id2, String newName) async {
+    await _familyService.addMemberToHouse(id, id2, newName);
+    loadHouseMembers();
+  }
+
+  deleteMember(String id, String id2) async {
+    await _familyService.addMemberToHouse(id, id2, "");
+    loadHouseMembers();
+  }
+
+  void addMember(String id, String name) async {
+    await _familyService.addMemberToFamilyGroup(id, name);
+    loadHouseMembers();
+  }
+
+  void addFamilyGroup(String name) async {
+    await _familyService.addFamilyGroup(name);
+    notifyListeners();
+  }
+
 }

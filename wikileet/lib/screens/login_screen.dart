@@ -1,9 +1,7 @@
-// login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wikileet/services/auth_service.dart';
-import 'package:wikileet/viewmodels/family_viewmodel.dart';
+import '../providers/user_provider.dart';
 import '../widgets/google_signin_button_wrapper.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -23,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             GoogleSignInButtonWrapper(
-              onSignIn: _handleGoogleSignIn,
+              onSignIn: () => _handleGoogleSignIn(context), // Pass context here
             ),
           ],
         ),
@@ -31,27 +29,18 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Future<void> _handleGoogleSignIn() async {
+  Future<void> _handleGoogleSignIn(BuildContext context) async {
     print("Attempting Google Sign-In...");
     try {
-      final user = await _authService.signInWithGoogle();
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final user = await _authService.signInWithGoogle(userProvider);
       if (user != null) {
         print("Google Sign-In successful, UID: ${user.uid}");
-
-        if (mounted) {
-          // Set `currentUserId` in `FamilyViewModel`
-          Provider.of<FamilyViewModel>(context, listen: false).currentUserId = user.uid;
-        }
       } else {
         print("Google Sign-In failed or canceled.");
       }
     } catch (e) {
       print("Google sign-in error: $e");
     }
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 }
