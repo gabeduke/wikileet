@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:wikileet/services/auth_service.dart';
-import '../providers/user_provider.dart';
 import '../widgets/google_signin_button_wrapper.dart';
 
 class LoginScreen extends StatefulWidget {
+  final Future<void> Function() onSignIn;
+
+  LoginScreen({required this.onSignIn});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final AuthService _authService = AuthService();
+  bool _isSigningIn = false;
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             GoogleSignInButtonWrapper(
-              onSignIn: () => _handleGoogleSignIn(context), // Pass context here
+              onSignIn: _handleGoogleSignIn,
             ),
           ],
         ),
@@ -29,18 +30,29 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Future<void> _handleGoogleSignIn(BuildContext context) async {
-    print("Attempting Google Sign-In...");
+  Future<void> _handleGoogleSignIn() async {
+    if (_isSigningIn) return;
+
+    setState(() {
+      _isSigningIn = true;
+    });
+
     try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final user = await _authService.signInWithGoogle(userProvider);
-      if (user != null) {
-        print("Google Sign-In successful, UID: ${user.uid}");
-      } else {
-        print("Google Sign-In failed or canceled.");
-      }
+      await widget.onSignIn();
+      print("Google Sign-In successful.");
     } catch (e) {
       print("Google sign-in error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error during sign-in: $e")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSigningIn = false;
+        });
+      }
     }
   }
 }

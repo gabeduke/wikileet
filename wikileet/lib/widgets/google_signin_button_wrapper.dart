@@ -1,20 +1,39 @@
-// lib/widgets/google_sign_in_button_wrapper.dart
-
 import 'package:flutter/material.dart';
 
-class GoogleSignInButtonWrapper extends StatelessWidget {
+class GoogleSignInButtonWrapper extends StatefulWidget {
   final Future<void> Function() onSignIn;
 
   GoogleSignInButtonWrapper({required this.onSignIn});
 
   @override
+  _GoogleSignInButtonWrapperState createState() => _GoogleSignInButtonWrapperState();
+}
+
+class _GoogleSignInButtonWrapperState extends State<GoogleSignInButtonWrapper> {
+  bool _isProcessing = false;
+
+  @override
   Widget build(BuildContext context) {
     return ElevatedButton(
-      onPressed: () {
-        print("Google Sign-In button was pressed."); // Log the button press
-        onSignIn();
+      onPressed: _isProcessing
+          ? null
+          : () async {
+        setState(() {
+          _isProcessing = true;
+        });
+        try {
+          await widget.onSignIn();
+        } catch (e) {
+          print("Error during Google Sign-In: $e");
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isProcessing = false;
+            });
+          }
+        }
       },
-      child: Text("Sign in with Google"),
+      child: _isProcessing ? CircularProgressIndicator() : Text("Sign in with Google"),
     );
   }
 }

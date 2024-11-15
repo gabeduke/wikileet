@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:wikileet/models/family_group.dart';
 import 'package:wikileet/models/user.dart';
 import 'package:wikileet/services/family_service.dart';
 import 'package:wikileet/services/user_service.dart';
+
+import '../models/house.dart';
 
 class FamilyViewModel with ChangeNotifier {
   final FamilyService _familyService = FamilyService();
@@ -16,6 +20,36 @@ class FamilyViewModel with ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
   bool _isDataLoaded = false;
+
+  StreamSubscription<FamilyGroup?>? _familyGroupSubscription;
+  StreamSubscription<List<House>>? _housesSubscription;
+
+  /// Subscribe to family group updates
+  void _subscribeToFamilyGroup() {
+    if (familyId == null) return;
+
+    _familyGroupSubscription?.cancel(); // Cancel any existing subscription
+    _familyGroupSubscription = _familyService.subscribeToFamilyGroup(familyId!).listen((familyGroup) {
+      if (familyGroup != null) {
+        familyGroups = [familyGroup];
+        _subscribeToHouses(); // Fetch houses for this family group
+        notifyListeners();
+      }
+    });
+  }
+
+  /// Subscribe to house updates
+  void _subscribeToHouses() {
+    if (familyId == null) return;
+
+    _housesSubscription?.cancel(); // Cancel any existing subscription
+    _housesSubscription = _familyService.subscribeToHouses(familyId!).listen((houses) {
+      if (familyGroups.isNotEmpty) {
+        familyGroups[0].houses = houses;
+        notifyListeners();
+      }
+    });
+  }
 
   /// Check if the user is a global admin
   Future<bool> checkAdminAuthorization(String userId) async {
@@ -97,7 +131,7 @@ class FamilyViewModel with ChangeNotifier {
   Future<List<User>> _fetchUsersByIds(List<String> userIds) async {
     return await Future.wait(userIds.map((id) async {
       return await _userService.getUserProfile(id) ??
-          User(uid: id, displayName: "Unknown", email: "");
+          User(uid: id, displayName: "Unknown", email: "", familyGroupId: '');
     }));
   }
 
@@ -119,20 +153,26 @@ class FamilyViewModel with ChangeNotifier {
   /// Retrieve all family groups, including houses, if not already loaded
   Future<void> getUserFamilyGroup(String userId) async {
     _setLoading(true);
-    try {
-      // Fetch the user's profile to get familyGroupId
-      final user = await _userService.getUserProfile(userId);
-      if (user?.familyGroupId != null) {
-        // Fetch the family group and houses
-        final familyGroup =
-            await _familyService.getFamilyGroupById(user!.familyGroupId!);
-        final houses =
-            await _familyService.getHousesForFamilyGroup(user.familyGroupId!);
 
-        // For each house, fetch the user profiles based on member IDs
+    try {
+      // Subscribe to real-time user profile updates
+      subscribeToUser(userId);
+
+      // Fetch the user's profile to get familyGroupId and houseId
+      final user = await _userService.getUserProfile(userId);
+      familyId = user?.familyGroupId;
+      houseId = user?.houseId;
+
+      if (familyId != null) {
+        // Fetch the family group
+        final familyGroup = await _familyService.getFamilyGroupById(familyId!);
+
+        // Fetch the houses for this family group
+        final houses = await _familyService.getHousesForFamilyGroup(familyId!);
+
+        // For each house, fetch its members and map user profiles to the house
         for (var house in houses) {
-          house.members =
-              await Future.wait(house.memberIds.map((memberId) async {
+          house.members = await Future.wait(house.memberIds.map((memberId) async {
             final member = await _userService.getUserProfile(memberId);
             return member?.displayName ?? 'Unknown User';
           }).toList());
@@ -140,11 +180,11 @@ class FamilyViewModel with ChangeNotifier {
 
         // Assign houses with user details back to the family group
         familyGroup.houses = houses;
-        familyGroups = [familyGroup];
+        familyGroups = [familyGroup]; // Replace with the single family group for the user
       } else {
-        familyGroups = []; // User is not part of any family group
+        familyGroups = []; // If the user is not part of any family group
       }
-      notifyListeners();
+      notifyListeners(); // Trigger UI update
     } catch (e) {
       errorMessage = 'Failed to load family group: $e';
       print(errorMessage);
@@ -152,6 +192,7 @@ class FamilyViewModel with ChangeNotifier {
       _setLoading(false);
     }
   }
+
 
   Future<void> getFamilyGroups() async {
     if (isLoading) return; // Prevent concurrent calls
@@ -239,5 +280,25 @@ class FamilyViewModel with ChangeNotifier {
     } catch (e) {
       return null; // Return null if no user is found
     }
+  }
+
+  /// Listen to user profile updates and react to family changes
+  void subscribeToUser(String userId) {
+    _familyService.subscribeToUserProfile(userId).listen((userData) {
+      final updatedFamilyGroupId = userData['familyGroupId'];
+      final updatedHouseId = userData['houseId'];
+
+      // If the family ID changes, reload the family group
+      if (updatedFamilyGroupId != familyId) {
+        familyId = updatedFamilyGroupId;
+        _subscribeToFamilyGroup();
+      }
+
+      // If the house ID changes, reload the house members
+      if (updatedHouseId != houseId) {
+        houseId = updatedHouseId;
+        _loadHouseMembers();
+      }
+    });
   }
 }

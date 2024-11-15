@@ -16,7 +16,7 @@ class User {
     required this.uid,
     required this.displayName,
     required this.email,
-    this.familyGroupId,
+    required this.familyGroupId,
     this.houseId,
     this.profilePicUrl,
   });

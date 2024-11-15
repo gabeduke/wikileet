@@ -8,8 +8,27 @@ class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
   final UserService _userService = UserService();
 
+  static bool _isGoogleSignInInitialized = false; // Initialization guard
+
   User? getCurrentUser() {
     return _auth.currentUser;
+  }
+
+  // Ensure GoogleSignIn is initialized once
+  Future<void> _initializeGoogleSignIn() async {
+    if (_isGoogleSignInInitialized) {
+      print("GoogleSignIn already initialized.");
+      return;
+    }
+
+    try {
+      // Attempt silent sign-in to initialize GoogleSignIn
+      await _googleSignIn.signInSilently();
+      _isGoogleSignInInitialized = true;
+      print("GoogleSignIn initialized successfully.");
+    } catch (e) {
+      print("Error initializing GoogleSignIn: $e");
+    }
   }
 
   // Listen to auth state changes and update UserProvider accordingly
@@ -25,6 +44,8 @@ class AuthService {
 
   // Sign-in with Google, set userId in UserProvider, and return the authenticated user
   Future<User?> signInWithGoogle(UserProvider userProvider) async {
+    await _initializeGoogleSignIn(); // Ensure initialization before sign-in
+
     try {
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null; // User canceled sign-in

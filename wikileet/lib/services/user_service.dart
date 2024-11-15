@@ -9,6 +9,7 @@ class UserService {
   final auth.FirebaseAuth? _auth;
   User? _cachedUser; // Cache the user to prevent duplicate calls
   bool _isFetchingProfile = false; // Prevent concurrent fetches
+  bool _isAddingUser = false;
 
   UserService({FirebaseFirestore? firestore, auth.FirebaseAuth? auth})
       : _firestore = firestore ?? FirebaseFirestore.instance,
@@ -34,27 +35,41 @@ class UserService {
 
   /// Add a new user to Firestore if they do not already exist
   Future<void> addUserIfNotExist(auth.User firebaseUser) async {
-    final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
+    if (_isAddingUser) {
+      print(
+          "Skipping duplicate addUserIfNotExist call for UID: ${firebaseUser.uid}");
+      return;
+    }
+    _isAddingUser = true; // Lock the method
 
-    // Force a fresh read from Firestore
-    final userDoc = await userDocRef.get(GetOptions(source: Source.server));
+    try {
+      final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
 
-    if (!userDoc.exists) {
-      final userData = {
-        'uid': firebaseUser.uid,
-        'displayName': firebaseUser.displayName ??
-            firebaseUser.email?.split('@').first ??
-            'Unknown',
-        'email': firebaseUser.email ?? 'unknown@example.com',
-        'familyGroupId': "CsK6qPSugEVSH0wKVQo0",
-        'houseId': null,
-        'profilePicUrl': firebaseUser.photoURL,
-      };
+      // Force a fresh read from Firestore
+      final userDoc = await userDocRef.get(GetOptions(source: Source.server));
 
-      await userDocRef.set(userData);
-      print("New user added to Firestore: ${firebaseUser.email}");
-    } else {
-      print("User already exists in Firestore: ${firebaseUser.email}");
+      if (!userDoc.exists) {
+        final userData = {
+          'uid': firebaseUser.uid,
+          'displayName': firebaseUser.displayName ??
+              firebaseUser.email?.split('@').first ??
+              'Unknown',
+          'email': firebaseUser.email ?? 'unknown@example.com',
+          'familyGroupId': "CsK6qPSugEVSH0wKVQo0", // Example default group
+          'houseId': null,
+          'profilePicUrl': firebaseUser.photoURL,
+        };
+
+        await userDocRef.set(userData);
+        print("New user added to Firestore: ${firebaseUser.email}");
+      } else {
+        print("User already exists in Firestore: ${firebaseUser.email}");
+      }
+    } catch (e) {
+      print("Error adding user to Firestore: $e");
+      rethrow;
+    } finally {
+      _isAddingUser = false; // Unlock the method
     }
   }
 

@@ -5,6 +5,34 @@ import 'package:wikileet/models/house.dart';
 class FamilyService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  /// Subscribe to real-time updates for a user profile
+  Stream<Map<String, dynamic>> subscribeToUserProfile(String userId) {
+    return _firestore.collection('users').doc(userId).snapshots().map((snapshot) {
+      return snapshot.data() ?? {};
+    });
+  }
+
+  /// Fetch and subscribe to a family group by ID
+  Stream<FamilyGroup?> subscribeToFamilyGroup(String familyGroupId) {
+    return _firestore.collection('family_groups').doc(familyGroupId).snapshots().map((snapshot) {
+      if (snapshot.exists) {
+        return FamilyGroup.fromFirestore(snapshot);
+      }
+      return null;
+    });
+  }
+
+  /// Fetch and subscribe to houses in a family group
+  Stream<List<House>> subscribeToHouses(String familyGroupId) {
+    return _firestore
+        .collection('family_groups')
+        .doc(familyGroupId)
+        .collection('houses')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => House.fromFirestore(doc)).toList());
+  }
+
+
   /// Set the family and house for a user, ensuring they are removed from any other houses in the same family group.
   Future<void> setFamilyAndHouseForUser(
       String familyGroupId, String? houseId, String userId) async {
