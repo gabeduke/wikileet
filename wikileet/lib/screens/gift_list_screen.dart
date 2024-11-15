@@ -36,6 +36,7 @@ class GiftListScreen extends StatelessWidget {
                         final gifts = entry.value;
                         return ExpansionTile(
                           title: Text(category),
+                          initiallyExpanded: true,
                           children: gifts.map((gift) {
                             return ListTile(
                               title: Text(

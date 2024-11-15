@@ -46,7 +46,7 @@ class UserService {
             firebaseUser.email?.split('@').first ??
             'Unknown',
         'email': firebaseUser.email ?? 'unknown@example.com',
-        'familyGroupId': null,
+        'familyGroupId': "CsK6qPSugEVSH0wKVQo0",
         'houseId': null,
         'profilePicUrl': firebaseUser.photoURL,
       };
