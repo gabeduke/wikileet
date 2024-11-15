@@ -229,4 +229,15 @@ class FamilyViewModel with ChangeNotifier {
     isLoading = value;
     Future.microtask(() => notifyListeners());
   }
+
+  String? getUserIdByUsername(String username) {
+    try {
+      final user = familyMembers.firstWhere(
+            (user) => user.displayName == username,
+      );
+      return user.uid; // Safely return the UID if found
+    } catch (e) {
+      return null; // Return null if no user is found
+    }
+  }
 }
