@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/family_group.dart';
-import '../models/house.dart';
 import '../viewmodels/family_viewmodel.dart';
 
 class AdminInterfaceScreen extends StatefulWidget {
@@ -13,7 +12,11 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
   @override
   void initState() {
     super.initState();
-    Provider.of<FamilyViewModel>(context, listen: false).getFamilyGroups(); // Load family groups
+    final familyViewModel = Provider.of<FamilyViewModel>(context, listen: false);
+
+    if (!familyViewModel.isLoading) {
+      familyViewModel.getFamilyGroups();
+    }
   }
 
   @override
@@ -43,13 +46,11 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
                     Text(familyGroup.name),
                     IconButton(
                       icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _deleteFamilyGroup(familyGroup.id),
+                      onPressed: () => _deleteFamilyGroup(context, familyGroup.id),
                     ),
                   ],
                 ),
-                children: [
-                  _buildHousesSection(familyGroup),
-                ],
+                children: [_buildHousesSection(context, familyGroup)],
               );
             },
           );
@@ -64,27 +65,31 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
     );
   }
 
-  Widget _buildHousesSection(FamilyGroup familyGroup) {
+  Widget _buildHousesSection(BuildContext context, FamilyGroup familyGroup) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
         children: [
           Text("Houses", style: TextStyle(fontWeight: FontWeight.bold)),
-          ...familyGroup.houses.map((house) => ListTile(
-            title: TextFormField(
-              initialValue: house.name,
-              decoration: InputDecoration(labelText: "House Name"),
-              onFieldSubmitted: (newName) {
-                Provider.of<FamilyViewModel>(context, listen: false).updateHouse(familyGroup.id, house.id, newName);
-              },
-            ),
-            trailing: IconButton(
-              icon: Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                Provider.of<FamilyViewModel>(context, listen: false).deleteHouse(familyGroup.id, house.id);
-              },
-            ),
-          )),
+          ...familyGroup.houses.map((house) {
+            return ListTile(
+              title: TextFormField(
+                initialValue: house.name,
+                decoration: InputDecoration(labelText: "House Name"),
+                onFieldSubmitted: (newName) {
+                  Provider.of<FamilyViewModel>(context, listen: false)
+                      .updateHouse(familyGroup.id, house.id, newName);
+                },
+              ),
+              trailing: IconButton(
+                icon: Icon(Icons.delete, color: Colors.red),
+                onPressed: () {
+                  Provider.of<FamilyViewModel>(context, listen: false)
+                      .deleteHouse(familyGroup.id, house.id);
+                },
+              ),
+            );
+          }).toList(),
           ElevatedButton(
             onPressed: () => _showAddDialog(context, "House", (name) {
               Provider.of<FamilyViewModel>(context, listen: false).addHouse(familyGroup.id, name);
@@ -96,7 +101,7 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
     );
   }
 
-  Future<void> _deleteFamilyGroup(String familyGroupId) async {
+  Future<void> _deleteFamilyGroup(BuildContext context, String familyGroupId) async {
     await Provider.of<FamilyViewModel>(context, listen: false).deleteFamilyGroup(familyGroupId);
   }
 
@@ -114,7 +119,9 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              onAdd(controller.text);
+              if (controller.text.isNotEmpty) {
+                onAdd(controller.text);
+              }
             },
             child: Text("Add"),
           ),

@@ -23,7 +23,7 @@ Future<void> main() async {
         final userProvider = UserProvider();
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasData) {
           // If there’s an authenticated user, set their userId
           final currentUser = authService.getCurrentUser();
@@ -39,7 +39,7 @@ Future<void> main() async {
             ChangeNotifierProvider(create: (_) => userProvider),
             ChangeNotifierProvider(create: (_) => FamilyViewModel()),
           ],
-          child: MyApp(),
+          child: const MyApp(),
         );
       },
     ),
@@ -48,6 +48,8 @@ Future<void> main() async {
 
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

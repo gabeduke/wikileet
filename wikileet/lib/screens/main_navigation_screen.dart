@@ -28,14 +28,32 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Future<void> _checkAdminStatus() async {
-    final userId = Provider.of<UserProvider>(context, listen: false).userId;
-    final isAdmin = await Provider.of<FamilyViewModel>(context, listen: false)
-        .checkAdminAuthorization(userId);
-    setState(() {
-      _isAdmin = isAdmin;
-      _screens = _buildScreens();
-    });
+    try {
+      final userId = Provider.of<UserProvider>(context, listen: false).userId;
+      if (userId == null) {
+        setState(() {
+          _isAdmin = false;
+          _screens = _buildScreens();
+        });
+        return;
+      }
+
+      final isAdmin = await Provider.of<FamilyViewModel>(context, listen: false)
+          .checkAdminAuthorization(userId);
+
+      setState(() {
+        _isAdmin = isAdmin;
+        _screens = _buildScreens();
+      });
+    } catch (e) {
+      print('Error checking admin status: $e');
+      setState(() {
+        _isAdmin = false;
+        _screens = _buildScreens();
+      });
+    }
   }
+
 
   List<Widget> _buildScreens() {
     return [
@@ -64,12 +82,35 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Check if the screen width is wide enough to display both Family and Gift List screens side by side
         bool isWideScreen = constraints.maxWidth > 800;
+
+        Widget bodyContent;
+
+        if (isWideScreen) {
+          // Wide screen logic: Admin replaces everything, else Family + Gift List side by side
+          if (_selectedIndex == 2 && _isAdmin) {
+            bodyContent = AdminInterfaceScreen();
+          } else {
+            bodyContent = Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: FamilyListScreen()),
+                Expanded(
+                  child: GiftListScreen(
+                    userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                  ),
+                ),
+              ],
+            );
+          }
+        } else {
+          // Narrow screen logic: Show the selected screen
+          bodyContent = _screens[_selectedIndex];
+        }
 
         return Scaffold(
           appBar: AppBar(
-            title: Text('WikiLeet'), // Static app title
+            title: Text('WikiLeet'),
             actions: [
               IconButton(
                 icon: Icon(Icons.logout),
@@ -77,31 +118,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
             ],
           ),
-          body: isWideScreen
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: FamilyListScreen()),
-                    Expanded(
-                        child: GiftListScreen(
-                            userId:
-                                FirebaseAuth.instance.currentUser?.uid ?? '')),
-                  ],
-                )
-              : _screens[_selectedIndex],
+          body: bodyContent,
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _selectedIndex,
-            onTap: _onItemTapped,
+            onTap: (index) {
+              if (index < _screens.length) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              }
+            },
             items: [
               BottomNavigationBarItem(
                 icon: Icon(Icons.group),
                 label: 'Family',
               ),
-              if (!isWideScreen) // Only show the "My Gift List" button on narrow screens
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.list),
-                  label: 'My Gift List',
-                ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.list),
+                label: 'My Gift List',
+              ),
               if (_isAdmin)
                 BottomNavigationBarItem(
                   icon: Icon(Icons.admin_panel_settings),

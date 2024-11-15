@@ -13,11 +13,18 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
   @override
   void initState() {
     super.initState();
-    Provider.of<FamilyViewModel>(context, listen: false).getFamilyGroups();
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+    Future.microtask(() =>
+        Provider.of<FamilyViewModel>(context, listen: false).getUserFamilyGroup(userId!)
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final userId = Provider
+        .of<UserProvider>(context, listen: false)
+        .userId;
+
     return Center(
       child: Container(
         child: Consumer<FamilyViewModel>(
@@ -34,9 +41,6 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
               return Center(child: Text('No family groups found.'));
             }
 
-            final userId =
-                Provider.of<UserProvider>(context, listen: false).userId;
-
             return ListView(
               children: familyViewModel.familyGroups.map((family) {
                 final hasHouses = family.houses.isNotEmpty;
@@ -49,23 +53,21 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
                         family.name,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: hasHouses
-                              ? Colors.black
-                              : Colors.grey, // Grey out if no houses
+                          color: hasHouses ? Colors.black : Colors.grey,
                         ),
                       ),
                       ElevatedButton(
                         onPressed: hasHouses
                             ? () async {
-                                await familyViewModel.addMemberToFamily(
-                                    family.id, userId!);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(
-                                          "Added to family: ${family.name}")),
-                                );
-                              }
-                            : null, // Disable button if no houses
+                          await familyViewModel.addMemberToFamily(
+                              family.id, userId!);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    "Added to family: ${family.name}")),
+                          );
+                        }
+                            : null,
                         child: Text('Join Family'),
                       ),
                     ],
@@ -73,17 +75,18 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
                   initiallyExpanded: true,
                   children: hasHouses
                       ? family.houses
-                          .map((house) => _buildHouseTile(
-                              context, family.id, house, userId!))
-                          .toList()
+                      .map((house) =>
+                      _buildHouseTile(
+                          context, family.id, house, userId!))
+                      .toList()
                       : [
-                          ListTile(
-                            title: Text(
-                              'No houses found in this family group.',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          )
-                        ],
+                    ListTile(
+                      title: Text(
+                        'No houses found in this family group.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    )
+                  ],
                 );
               }).toList(),
             );
@@ -93,39 +96,44 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
     );
   }
 
-  Widget _buildHouseTile(
-      BuildContext context, String familyGroupId, House house, String userId) {
-    return ExpansionTile(
-      title: Text(house.name, style: TextStyle(color: Colors.blueAccent)),
-      children: house.members.isNotEmpty
-          ? house.members
-          .map((member) => ListTile(
-        title: Text(member),
-      ))
-          .toList()
-          : [
-        ListTile(
-          title: Text('No members found in this house.'),
-        ),
-      ],
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ElevatedButton(
-            onPressed: () async {
-              await Provider.of<FamilyViewModel>(context, listen: false)
-                  .addMemberToHouse(familyGroupId, house.id, userId);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Added to house: ${house.name}")),
-              );
-            },
-            child: Text('Join House'),
+  Widget _buildHouseTile(BuildContext context, String familyGroupId, House house, String userId) {
+    return Consumer<FamilyViewModel>(
+      builder: (context, familyViewModel, child) {
+        return ExpansionTile(
+          title: Text(house.name, style: TextStyle(color: Colors.blueAccent)),
+          children: house.members.isNotEmpty
+              ? house.members
+              .map((username) => ListTile(
+            title: Text(username),
+          ))
+              .toList()
+              : [
+            ListTile(
+              title: Text('No members found in this house.'),
+            ),
+          ],
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ElevatedButton(
+                onPressed: () async {
+                  await familyViewModel.selectFamilyAndHouse(
+                      familyGroupId, house.id, userId);
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Added to house: ${house.name}")),
+                    );
+                  }
+                },
+                child: Text('Join House'),
+              ),
+              if (house.members.isNotEmpty) Icon(Icons.expand_more),
+            ],
           ),
-          // Add arrow indicator only if there are members in the house
-          if (house.members.isNotEmpty)
-            Icon(Icons.expand_more), // Arrow icon for expansion
-        ],
-      ),
+        );
+      },
     );
   }
+
 }

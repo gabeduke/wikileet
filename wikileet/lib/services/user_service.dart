@@ -1,12 +1,8 @@
-// lib/services/user_service.dart
-
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:wikileet/models/user.dart';
-
-import '../providers/user_provider.dart';
 
 class UserService {
   final FirebaseFirestore _firestore;
@@ -18,6 +14,7 @@ class UserService {
       : _firestore = firestore ?? FirebaseFirestore.instance,
         _auth = auth;
 
+  /// Check if a user is a global admin by their user ID
   Future<bool> isGlobalAdmin(String userId) async {
     try {
       final userDoc = await _firestore.collection('users').doc(userId).get();
@@ -29,10 +26,12 @@ class UserService {
     }
   }
 
+  /// Update user profile fields by providing a user ID and a map of updates
   Future<void> updateUserProfile(String userId, Map<String, dynamic> updates) async {
     await _firestore.collection('users').doc(userId).update(updates);
   }
 
+  /// Add a new user to Firestore if they do not already exist
   Future<void> addUserIfNotExist(auth.User firebaseUser) async {
     final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
 
@@ -40,18 +39,15 @@ class UserService {
     final userDoc = await userDocRef.get(GetOptions(source: Source.server));
 
     if (!userDoc.exists) {
-      // Prepare data for new user
       final userData = {
         'uid': firebaseUser.uid,
         'displayName': firebaseUser.displayName ?? firebaseUser.email?.split('@').first ?? 'Unknown',
         'email': firebaseUser.email ?? 'unknown@example.com',
         'familyGroupId': null,
+        'houseId': null,
         'profilePicUrl': firebaseUser.photoURL,
       };
 
-      print("Creating new user in Firestore with data: $userData");
-
-      // Write user data to Firestore
       await userDocRef.set(userData);
       print("New user added to Firestore: ${firebaseUser.email}");
     } else {
@@ -59,46 +55,39 @@ class UserService {
     }
   }
 
-
+  /// Fetch a user profile by their user ID
   Future<User?> getUserProfile(String userId) async {
-    // Return cached user if available
     if (_cachedUser != null && _cachedUser!.uid == userId) {
-      print('Returning cached user profile for UID: $userId');
-      return _cachedUser;
+      return _cachedUser; // Return cached user if available
     }
 
-    // Prevent concurrent fetches
     if (_isFetchingProfile) {
-      print('Already fetching profile for UID: $userId. Returning null.');
-      return null;
+      return null; // Prevent concurrent fetches
     }
 
     _isFetchingProfile = true;
     try {
-      print('Attempting to fetch user profile for UID: $userId');
       final userDoc = await _firestore.collection('users').doc(userId).get();
 
       if (userDoc.exists) {
-        print('User profile found in Firestore for UID: $userId');
         _cachedUser = User.fromJson(userDoc); // Cache the result
         return _cachedUser;
-      } else {
-        print('User not found in Firestore: $userId');
-        return null;
       }
+      return null;
     } catch (e) {
       print('Failed to get user profile: $e');
       throw Exception('Failed to get user profile: $e');
     } finally {
-      _isFetchingProfile = false; // Reset fetching state
+      _isFetchingProfile = false;
     }
   }
 
-
+  /// Add a user to Firestore
   Future<void> addUser(User user) async {
     await _firestore.collection('users').doc(user.uid).set(user.toJson());
   }
 
+  /// Get a user document by their UID
   Future<User?> getUser(String uid) async {
     final docSnapshot = await _firestore.collection('users').doc(uid).get();
     if (docSnapshot.exists) {
@@ -107,15 +96,17 @@ class UserService {
     return null;
   }
 
+  /// Update user fields in Firestore by their UID
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
     await _firestore.collection('users').doc(uid).update(data);
   }
 
+  /// Delete a user from Firestore by their UID
   Future<void> deleteUser(String uid) async {
     await _firestore.collection('users').doc(uid).delete();
   }
 
-  // Optional method for authenticated user retrieval, not needed for Firestore tests
+  /// Get the current authenticated user (optional method)
   auth.User? getCurrentUser() {
     return _auth?.currentUser;
   }
