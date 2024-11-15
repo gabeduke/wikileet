@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wikileet/viewmodels/family_viewmodel.dart';
-import 'package:wikileet/screens/gift_list_screen.dart';
-
+import '../providers/user_provider.dart';
 import '../models/house.dart';
-import 'family_selection_screen.dart';
 
 class FamilyListScreen extends StatefulWidget {
   @override
@@ -15,7 +13,6 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
   @override
   void initState() {
     super.initState();
-    // Trigger data loading in initState
     Provider.of<FamilyViewModel>(context, listen: false).getFamilyGroups();
   }
 
@@ -23,27 +20,39 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
   Widget build(BuildContext context) {
     return Consumer<FamilyViewModel>(
       builder: (context, familyViewModel, child) {
-        // Display loading indicator
         if (familyViewModel.isLoading) {
           return Center(child: CircularProgressIndicator());
         }
 
-        // Display error message
         if (familyViewModel.errorMessage != null) {
           return Center(child: Text(familyViewModel.errorMessage!));
         }
 
-        // Display message if no family groups are found
         if (familyViewModel.familyGroups.isEmpty) {
           return Center(child: Text('No family groups found.'));
         }
 
-        // Render family groups and houses
+        final userId = Provider.of<UserProvider>(context, listen: false).userId;
+
         return ListView(
           children: familyViewModel.familyGroups.map((family) => ExpansionTile(
-            title: Text(family.name, style: TextStyle(fontWeight: FontWeight.bold)),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(family.name, style: TextStyle(fontWeight: FontWeight.bold)),
+                ElevatedButton(
+                  onPressed: () async {
+                    await familyViewModel.addMemberToFamily(family.id, userId!);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Added to family: ${family.name}")),
+                    );
+                  },
+                  child: Text('Join Family'),
+                ),
+              ],
+            ),
             children: family.houses.isNotEmpty
-                ? family.houses.map((house) => _buildHouseTile(context, family.id, house)).toList()
+                ? family.houses.map((house) => _buildHouseTile(context, family.id, house, userId!)).toList()
                 : [ListTile(title: Text('No houses found in this family group.'))],
           )).toList(),
         );
@@ -51,40 +60,19 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
     );
   }
 
-  Widget _buildHouseTile(BuildContext context, String familyGroupId, House house) {
-    return ExpansionTile(
-      title: Text(house.name, style: TextStyle(color: Colors.blueAccent)),
-      children: [
-        if (house.members.isNotEmpty)
-          ...house.members.map((member) => _buildMemberTile(context, familyGroupId, house.id, member))
-        else
-          ListTile(
-            title: Text('No members found in this house.'),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildMemberTile(BuildContext context, String familyGroupId, String houseId, String member) {
+  Widget _buildHouseTile(BuildContext context, String familyGroupId, House house, String userId) {
     return ListTile(
-      title: Text(member),
-      trailing: IconButton(
-        icon: Icon(Icons.edit, color: Colors.grey),
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => FamilySelectionScreen(userId: member),
-            ),
+      title: Text(house.name, style: TextStyle(color: Colors.blueAccent)),
+      trailing: ElevatedButton(
+        onPressed: () async {
+          await Provider.of<FamilyViewModel>(context, listen: false)
+              .addMemberToHouse(familyGroupId, house.id, userId);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Added to house: ${house.name}")),
           );
         },
+        child: Text('Join House'),
       ),
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => GiftListScreen(userId: member),
-          ),
-        );
-      },
     );
   }
 }
