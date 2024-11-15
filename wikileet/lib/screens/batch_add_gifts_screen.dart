@@ -96,11 +96,13 @@ class _BatchAddGiftsScreenState extends State<BatchAddGiftsScreen> {
                           TextFormField(
                             controller: _nameControllers[index],
                             decoration: InputDecoration(labelText: 'Gift Name'),
-                            validator: (value) => value!.isEmpty ? 'Please enter a name' : null,
+                            validator: (value) =>
+                                value!.isEmpty ? 'Please enter a name' : null,
                           ),
                           TextFormField(
                             controller: _descriptionControllers[index],
-                            decoration: InputDecoration(labelText: 'Description'),
+                            decoration:
+                                InputDecoration(labelText: 'Description'),
                           ),
                           TextFormField(
                             controller: _urlControllers[index],

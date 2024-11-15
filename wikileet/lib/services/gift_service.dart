@@ -36,9 +36,7 @@ class GiftService {
         .orderBy('createdAt', descending: true)
         .get();
 
-    return querySnapshot.docs
-        .map((doc) => Gift.fromFirestore(doc))
-        .toList();
+    return querySnapshot.docs.map((doc) => Gift.fromFirestore(doc)).toList();
   }
 
   Stream<List<Gift>> getGiftListStream(String userId) {
@@ -49,13 +47,14 @@ class GiftService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) =>
-        snapshot.docs.map((doc) => Gift.fromFirestore(doc)).toList());
+            snapshot.docs.map((doc) => Gift.fromFirestore(doc)).toList());
   }
 
   // Method for batch adding multiple gifts
   Future<void> batchAddGifts(String userId, List<Gift> gifts) async {
     final batch = _firestore.batch();
-    final userGiftsRef = _firestore.collection('users').doc(userId).collection('gifts');
+    final userGiftsRef =
+        _firestore.collection('users').doc(userId).collection('gifts');
 
     for (var gift in gifts) {
       final giftRef = userGiftsRef.doc(gift.id);
@@ -94,7 +93,8 @@ class GiftService {
   }
 
   /// Updates a gift's data, specifically for marking as purchased.
-  Future<void> updateGift(String userId, String giftId, Map<String, dynamic> data) async {
+  Future<void> updateGift(
+      String userId, String giftId, Map<String, dynamic> data) async {
     await _firestore
         .collection('users')
         .doc(userId)
@@ -112,5 +112,4 @@ class GiftService {
         .doc(giftId)
         .delete();
   }
-
 }

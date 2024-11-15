@@ -31,7 +31,8 @@ class GiftListViewModel extends ChangeNotifier {
     isOwner = currentUserId == giftListOwnerId;
 
     // Listen to the gifts stream
-    _giftsSubscription = giftService.getGiftListStream(giftListOwnerId).listen((giftList) {
+    _giftsSubscription =
+        giftService.getGiftListStream(giftListOwnerId).listen((giftList) {
       _gifts = giftList;
 
       // Organize gifts by category
@@ -50,7 +51,8 @@ class GiftListViewModel extends ChangeNotifier {
 
   bool canTogglePurchasedStatus(Gift gift) {
     // Users can toggle if they are the ones who marked it or if it's unpurchased
-    return !isOwner && (gift.purchasedBy == null || gift.purchasedBy == currentUserId);
+    return !isOwner &&
+        (gift.purchasedBy == null || gift.purchasedBy == currentUserId);
   }
 
   Future<void> togglePurchasedStatus(Gift gift) async {

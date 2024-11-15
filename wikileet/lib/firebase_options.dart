@@ -69,7 +69,8 @@ class DefaultFirebaseOptions {
     projectId: 'wikileet',
     databaseURL: 'https://wikileet.firebaseio.com',
     storageBucket: 'wikileet.appspot.com',
-    iosClientId: '179879905839-p56trdr0cd1n97dku471l2k51qvirod0.apps.googleusercontent.com',
+    iosClientId:
+        '179879905839-p56trdr0cd1n97dku471l2k51qvirod0.apps.googleusercontent.com',
     iosBundleId: 'com.example.wikileet',
   );
 
@@ -80,8 +81,8 @@ class DefaultFirebaseOptions {
     projectId: 'wikileet',
     databaseURL: 'https://wikileet.firebaseio.com',
     storageBucket: 'wikileet.appspot.com',
-    iosClientId: '179879905839-p56trdr0cd1n97dku471l2k51qvirod0.apps.googleusercontent.com',
+    iosClientId:
+        '179879905839-p56trdr0cd1n97dku471l2k51qvirod0.apps.googleusercontent.com',
     iosBundleId: 'com.example.wikileet',
   );
-
 }

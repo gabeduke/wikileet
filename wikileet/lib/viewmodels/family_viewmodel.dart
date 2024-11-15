@@ -47,10 +47,12 @@ class FamilyViewModel with ChangeNotifier {
   }
 
   /// Select a family group and optionally a house, updating Firestore
-  Future<void> selectFamilyAndHouse(String familyGroupId, String? houseId, String userId) async {
+  Future<void> selectFamilyAndHouse(
+      String familyGroupId, String? houseId, String userId) async {
     _setLoading(true);
     try {
-      await _familyService.setFamilyAndHouseForUser(familyGroupId, houseId, userId);
+      await _familyService.setFamilyAndHouseForUser(
+          familyGroupId, houseId, userId);
 
       // Update in-memory family and house IDs
       familyId = familyGroupId;
@@ -82,7 +84,8 @@ class FamilyViewModel with ChangeNotifier {
   Future<List<User>> _loadHouseMembers() async {
     if (familyId == null || houseId == null) return [];
     try {
-      final memberIds = await _familyService.getHouseMembers(familyId!, houseId!);
+      final memberIds =
+          await _familyService.getHouseMembers(familyId!, houseId!);
       return await _fetchUsersByIds(memberIds);
     } catch (e) {
       errorMessage = 'Failed to load house members: $e';
@@ -106,7 +109,8 @@ class FamilyViewModel with ChangeNotifier {
   }
 
   /// Add a member to the house and reload the list of house members
-  Future<void> addMemberToHouse(String familyGroupId, String houseId, String userId) async {
+  Future<void> addMemberToHouse(
+      String familyGroupId, String houseId, String userId) async {
     await _familyService.addMemberToHouse(familyGroupId, houseId, userId);
     houseMembers = await _loadHouseMembers();
     notifyListeners();
@@ -120,12 +124,15 @@ class FamilyViewModel with ChangeNotifier {
       final user = await _userService.getUserProfile(userId);
       if (user?.familyGroupId != null) {
         // Fetch the family group and houses
-        final familyGroup = await _familyService.getFamilyGroupById(user!.familyGroupId!);
-        final houses = await _familyService.getHousesForFamilyGroup(user.familyGroupId!);
+        final familyGroup =
+            await _familyService.getFamilyGroupById(user!.familyGroupId!);
+        final houses =
+            await _familyService.getHousesForFamilyGroup(user.familyGroupId!);
 
         // For each house, fetch the user profiles based on member IDs
         for (var house in houses) {
-          house.members = await Future.wait(house.memberIds.map((memberId) async {
+          house.members =
+              await Future.wait(house.memberIds.map((memberId) async {
             final member = await _userService.getUserProfile(memberId);
             return member?.displayName ?? 'Unknown User';
           }).toList());
@@ -145,7 +152,6 @@ class FamilyViewModel with ChangeNotifier {
       _setLoading(false);
     }
   }
-
 
   Future<void> getFamilyGroups() async {
     if (isLoading) return; // Prevent concurrent calls
@@ -186,8 +192,7 @@ class FamilyViewModel with ChangeNotifier {
             name: name,
             members: [],
             houseIds: [],
-            houses: []
-        ));
+            houses: []));
     family.houses = await _familyService.getHousesForFamilyGroup(familyGroupId);
     notifyListeners();
   }
@@ -195,15 +200,18 @@ class FamilyViewModel with ChangeNotifier {
   /// Delete a house from a family group and refresh the houses for that group
   Future<void> deleteHouse(String familyGroupId, String houseId) async {
     await _familyService.deleteHouse(familyGroupId, houseId);
-    final family = familyGroups.firstWhere((group) => group.id == familyGroupId);
+    final family =
+        familyGroups.firstWhere((group) => group.id == familyGroupId);
     family.houses = await _familyService.getHousesForFamilyGroup(familyGroupId);
     notifyListeners();
   }
 
   /// Update the name of a house and refresh the houses for the family group
-  Future<void> updateHouse(String familyGroupId, String houseId, String newName) async {
+  Future<void> updateHouse(
+      String familyGroupId, String houseId, String newName) async {
     await _familyService.updateHouseName(familyGroupId, houseId, newName);
-    final family = familyGroups.firstWhere((group) => group.id == familyGroupId);
+    final family =
+        familyGroups.firstWhere((group) => group.id == familyGroupId);
     family.houses = await _familyService.getHousesForFamilyGroup(familyGroupId);
     notifyListeners();
   }

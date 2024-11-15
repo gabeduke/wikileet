@@ -10,7 +10,8 @@ class FamilyMember {
   factory FamilyMember.fromFirestore(Map<String, dynamic> data, String id) {
     return FamilyMember(
       id: id,
-      displayName: data['displayName'] ?? 'Unknown', // Default to 'Unknown' if no name provided
+      displayName: data['displayName'] ??
+          'Unknown', // Default to 'Unknown' if no name provided
     );
   }
 

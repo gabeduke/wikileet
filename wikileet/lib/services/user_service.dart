@@ -27,7 +27,8 @@ class UserService {
   }
 
   /// Update user profile fields by providing a user ID and a map of updates
-  Future<void> updateUserProfile(String userId, Map<String, dynamic> updates) async {
+  Future<void> updateUserProfile(
+      String userId, Map<String, dynamic> updates) async {
     await _firestore.collection('users').doc(userId).update(updates);
   }
 
@@ -41,7 +42,9 @@ class UserService {
     if (!userDoc.exists) {
       final userData = {
         'uid': firebaseUser.uid,
-        'displayName': firebaseUser.displayName ?? firebaseUser.email?.split('@').first ?? 'Unknown',
+        'displayName': firebaseUser.displayName ??
+            firebaseUser.email?.split('@').first ??
+            'Unknown',
         'email': firebaseUser.email ?? 'unknown@example.com',
         'familyGroupId': null,
         'houseId': null,

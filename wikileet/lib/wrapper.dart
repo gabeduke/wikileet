@@ -9,7 +9,8 @@ class Wrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(), // Listen to auth state changes
+      stream: FirebaseAuth.instance
+          .authStateChanges(), // Listen to auth state changes
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           // Show a loading spinner in a full scaffold for consistency

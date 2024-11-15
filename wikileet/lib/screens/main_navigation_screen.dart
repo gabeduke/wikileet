@@ -54,7 +54,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-
   List<Widget> _buildScreens() {
     return [
       FamilyListScreen(),

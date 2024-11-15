@@ -14,16 +14,13 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
   void initState() {
     super.initState();
     final userId = Provider.of<UserProvider>(context, listen: false).userId;
-    Future.microtask(() =>
-        Provider.of<FamilyViewModel>(context, listen: false).getUserFamilyGroup(userId!)
-    );
+    Future.microtask(() => Provider.of<FamilyViewModel>(context, listen: false)
+        .getUserFamilyGroup(userId!));
   }
 
   @override
   Widget build(BuildContext context) {
-    final userId = Provider
-        .of<UserProvider>(context, listen: false)
-        .userId;
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
 
     return Center(
       child: Container(
@@ -56,37 +53,22 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
                           color: hasHouses ? Colors.black : Colors.grey,
                         ),
                       ),
-                      ElevatedButton(
-                        onPressed: hasHouses
-                            ? () async {
-                          await familyViewModel.addMemberToFamily(
-                              family.id, userId!);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text(
-                                    "Added to family: ${family.name}")),
-                          );
-                        }
-                            : null,
-                        child: Text('Join Family'),
-                      ),
                     ],
                   ),
                   initiallyExpanded: true,
                   children: hasHouses
                       ? family.houses
-                      .map((house) =>
-                      _buildHouseTile(
-                          context, family.id, house, userId!))
-                      .toList()
+                          .map((house) => _buildHouseTile(
+                              context, family.id, house, userId!))
+                          .toList()
                       : [
-                    ListTile(
-                      title: Text(
-                        'No houses found in this family group.',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    )
-                  ],
+                          ListTile(
+                            title: Text(
+                              'No houses found in this family group.',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                        ],
                 );
               }).toList(),
             );
@@ -96,22 +78,23 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
     );
   }
 
-  Widget _buildHouseTile(BuildContext context, String familyGroupId, House house, String userId) {
+  Widget _buildHouseTile(
+      BuildContext context, String familyGroupId, House house, String userId) {
     return Consumer<FamilyViewModel>(
       builder: (context, familyViewModel, child) {
         return ExpansionTile(
           title: Text(house.name, style: TextStyle(color: Colors.blueAccent)),
           children: house.members.isNotEmpty
               ? house.members
-              .map((username) => ListTile(
-            title: Text(username),
-          ))
-              .toList()
+                  .map((username) => ListTile(
+                        title: Text(username),
+                      ))
+                  .toList()
               : [
-            ListTile(
-              title: Text('No members found in this house.'),
-            ),
-          ],
+                  ListTile(
+                    title: Text('No members found in this house.'),
+                  ),
+                ],
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -135,5 +118,4 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
       },
     );
   }
-
 }

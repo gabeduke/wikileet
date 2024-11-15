@@ -21,10 +21,14 @@ class NavigationService {
 
     try {
       final userDoc = await _userService.getUserProfile(userId);
-      if (userDoc == null || userDoc.familyGroupId == null || userDoc.houseId == null) {
-        print("Navigating to FamilySelectionScreen due to missing family or house info.");
+      if (userDoc == null ||
+          userDoc.familyGroupId == null ||
+          userDoc.houseId == null) {
+        print(
+            "Navigating to FamilySelectionScreen due to missing family or house info.");
         navigatorKey.currentState?.pushReplacement(
-          MaterialPageRoute(builder: (context) => FamilySelectionScreen(userId: userId)),
+          MaterialPageRoute(
+              builder: (context) => FamilySelectionScreen(userId: userId)),
         );
       } else {
         print("Navigating to MainNavigationScreen.");

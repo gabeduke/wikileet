@@ -6,9 +6,11 @@ class FamilyService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   /// Set the family and house for a user, ensuring they are removed from any other houses in the same family group.
-  Future<void> setFamilyAndHouseForUser(String familyGroupId, String? houseId, String userId) async {
+  Future<void> setFamilyAndHouseForUser(
+      String familyGroupId, String? houseId, String userId) async {
     final userRef = _firestore.collection('users').doc(userId);
-    final familyGroupRef = _firestore.collection('family_groups').doc(familyGroupId);
+    final familyGroupRef =
+        _firestore.collection('family_groups').doc(familyGroupId);
 
     await _firestore.runTransaction((transaction) async {
       // Update user's familyGroupId and houseId
@@ -45,10 +47,11 @@ class FamilyService {
     });
   }
 
-
   /// Add a user to the family group and update their `familyGroupId` field.
-  Future<void> addMemberToFamilyGroup(String familyGroupId, String userId) async {
-    final familyGroupRef = _firestore.collection('family_groups').doc(familyGroupId);
+  Future<void> addMemberToFamilyGroup(
+      String familyGroupId, String userId) async {
+    final familyGroupRef =
+        _firestore.collection('family_groups').doc(familyGroupId);
     final userRef = _firestore.collection('users').doc(userId);
 
     await _firestore.runTransaction((transaction) async {
@@ -60,8 +63,10 @@ class FamilyService {
   }
 
   /// Remove a user from the family group and clear their `familyGroupId`.
-  Future<void> removeMemberFromFamilyGroup(String familyGroupId, String userId) async {
-    final familyGroupRef = _firestore.collection('family_groups').doc(familyGroupId);
+  Future<void> removeMemberFromFamilyGroup(
+      String familyGroupId, String userId) async {
+    final familyGroupRef =
+        _firestore.collection('family_groups').doc(familyGroupId);
     final userRef = _firestore.collection('users').doc(userId);
 
     await _firestore.runTransaction((transaction) async {
@@ -73,8 +78,13 @@ class FamilyService {
   }
 
   /// Add a user to a specific house within a family group.
-  Future<void> addMemberToHouse(String familyGroupId, String houseId, String userId) async {
-    final houseRef = _firestore.collection('family_groups').doc(familyGroupId).collection('houses').doc(houseId);
+  Future<void> addMemberToHouse(
+      String familyGroupId, String houseId, String userId) async {
+    final houseRef = _firestore
+        .collection('family_groups')
+        .doc(familyGroupId)
+        .collection('houses')
+        .doc(houseId);
     final userRef = _firestore.collection('users').doc(userId);
 
     await _firestore.runTransaction((transaction) async {
@@ -86,8 +96,13 @@ class FamilyService {
   }
 
   /// Remove a user from a specific house and clear their `houseId`.
-  Future<void> removeMemberFromHouse(String familyGroupId, String houseId, String userId) async {
-    final houseRef = _firestore.collection('family_groups').doc(familyGroupId).collection('houses').doc(houseId);
+  Future<void> removeMemberFromHouse(
+      String familyGroupId, String houseId, String userId) async {
+    final houseRef = _firestore
+        .collection('family_groups')
+        .doc(familyGroupId)
+        .collection('houses')
+        .doc(houseId);
     final userRef = _firestore.collection('users').doc(userId);
 
     await _firestore.runTransaction((transaction) async {
@@ -102,7 +117,9 @@ class FamilyService {
   Future<List<FamilyGroup>> getAllFamilyGroups() async {
     try {
       final snapshot = await _firestore.collection('family_groups').get();
-      return snapshot.docs.map((doc) => FamilyGroup.fromFirestore(doc)).toList();
+      return snapshot.docs
+          .map((doc) => FamilyGroup.fromFirestore(doc))
+          .toList();
     } catch (e) {
       print("Error fetching all family groups: $e");
       return [];
@@ -112,7 +129,11 @@ class FamilyService {
   /// Fetch all houses in a specified family group.
   Future<List<House>> getHousesForFamilyGroup(String familyGroupId) async {
     try {
-      final snapshot = await _firestore.collection('family_groups').doc(familyGroupId).collection('houses').get();
+      final snapshot = await _firestore
+          .collection('family_groups')
+          .doc(familyGroupId)
+          .collection('houses')
+          .get();
       return snapshot.docs.map((doc) => House.fromFirestore(doc)).toList();
     } catch (e) {
       print("Error fetching houses for family group $familyGroupId: $e");
@@ -123,7 +144,8 @@ class FamilyService {
   /// Retrieve all members of a family by user IDs.
   Future<List<String>> getFamilyMembers(String familyId) async {
     try {
-      final familyDoc = await _firestore.collection('family_groups').doc(familyId).get();
+      final familyDoc =
+          await _firestore.collection('family_groups').doc(familyId).get();
       return familyDoc.exists ? List<String>.from(familyDoc['members']) : [];
     } catch (e) {
       print("Error fetching family members for family ID $familyId: $e");
@@ -132,13 +154,20 @@ class FamilyService {
   }
 
   /// Retrieve all members of a house by user IDs.
-  Future<List<String>> getHouseMembers(String familyGroupId, String houseId) async {
+  Future<List<String>> getHouseMembers(
+      String familyGroupId, String houseId) async {
     try {
-      final doc = await _firestore.collection('family_groups').doc(familyGroupId).collection('houses').doc(houseId).get();
+      final doc = await _firestore
+          .collection('family_groups')
+          .doc(familyGroupId)
+          .collection('houses')
+          .doc(houseId)
+          .get();
       final data = doc.data();
       return List<String>.from(data?['members'] ?? []);
     } catch (e) {
-      print("Error fetching house members for house $houseId in family group $familyGroupId: $e");
+      print(
+          "Error fetching house members for house $houseId in family group $familyGroupId: $e");
       return [];
     }
   }
@@ -158,7 +187,8 @@ class FamilyService {
   /// Add a new house to a specific family group.
   Future<void> addHouse(String familyGroupId, String name) async {
     try {
-      final familyGroupRef = _firestore.collection('family_groups').doc(familyGroupId);
+      final familyGroupRef =
+          _firestore.collection('family_groups').doc(familyGroupId);
       final houseRef = familyGroupRef.collection('houses').doc();
       await houseRef.set({
         'name': name,
@@ -172,7 +202,11 @@ class FamilyService {
   /// Delete a house from a specific family group.
   Future<void> deleteHouse(String familyGroupId, String houseId) async {
     try {
-      final houseRef = _firestore.collection('family_groups').doc(familyGroupId).collection('houses').doc(houseId);
+      final houseRef = _firestore
+          .collection('family_groups')
+          .doc(familyGroupId)
+          .collection('houses')
+          .doc(houseId);
       await houseRef.delete();
     } catch (e) {
       print("Error deleting house $houseId: $e");
@@ -180,9 +214,14 @@ class FamilyService {
   }
 
   /// Update the name of a house within a family group.
-  Future<void> updateHouseName(String familyGroupId, String houseId, String newName) async {
+  Future<void> updateHouseName(
+      String familyGroupId, String houseId, String newName) async {
     try {
-      final houseRef = _firestore.collection('family_groups').doc(familyGroupId).collection('houses').doc(houseId);
+      final houseRef = _firestore
+          .collection('family_groups')
+          .doc(familyGroupId)
+          .collection('houses')
+          .doc(houseId);
       await houseRef.update({'name': newName});
     } catch (e) {
       print("Error updating house $houseId name to '$newName': $e");
@@ -192,7 +231,8 @@ class FamilyService {
   /// Delete a family group by its ID.
   Future<void> deleteFamilyGroup(String familyGroupId) async {
     try {
-      final familyGroupRef = _firestore.collection('family_groups').doc(familyGroupId);
+      final familyGroupRef =
+          _firestore.collection('family_groups').doc(familyGroupId);
       await familyGroupRef.delete();
     } catch (e) {
       print("Error deleting family group $familyGroupId: $e");
@@ -201,7 +241,8 @@ class FamilyService {
 
   Future<FamilyGroup> getFamilyGroupById(String familyGroupId) async {
     try {
-      final doc = await _firestore.collection('family_groups').doc(familyGroupId).get();
+      final doc =
+          await _firestore.collection('family_groups').doc(familyGroupId).get();
       if (doc.exists) {
         return FamilyGroup.fromFirestore(doc);
       } else {
@@ -212,5 +253,4 @@ class FamilyService {
       rethrow;
     }
   }
-
 }

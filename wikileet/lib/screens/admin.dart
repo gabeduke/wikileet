@@ -12,7 +12,8 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
   @override
   void initState() {
     super.initState();
-    final familyViewModel = Provider.of<FamilyViewModel>(context, listen: false);
+    final familyViewModel =
+        Provider.of<FamilyViewModel>(context, listen: false);
 
     if (!familyViewModel.isLoading) {
       familyViewModel.getFamilyGroups();
@@ -46,7 +47,8 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
                     Text(familyGroup.name),
                     IconButton(
                       icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _deleteFamilyGroup(context, familyGroup.id),
+                      onPressed: () =>
+                          _deleteFamilyGroup(context, familyGroup.id),
                     ),
                   ],
                 ),
@@ -59,7 +61,8 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.add),
         onPressed: () => _showAddDialog(context, "Family Group", (name) {
-          Provider.of<FamilyViewModel>(context, listen: false).addFamilyGroup(name);
+          Provider.of<FamilyViewModel>(context, listen: false)
+              .addFamilyGroup(name);
         }),
       ),
     );
@@ -92,7 +95,8 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
           }).toList(),
           ElevatedButton(
             onPressed: () => _showAddDialog(context, "House", (name) {
-              Provider.of<FamilyViewModel>(context, listen: false).addHouse(familyGroup.id, name);
+              Provider.of<FamilyViewModel>(context, listen: false)
+                  .addHouse(familyGroup.id, name);
             }),
             child: Text("Add House"),
           ),
@@ -101,11 +105,14 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
     );
   }
 
-  Future<void> _deleteFamilyGroup(BuildContext context, String familyGroupId) async {
-    await Provider.of<FamilyViewModel>(context, listen: false).deleteFamilyGroup(familyGroupId);
+  Future<void> _deleteFamilyGroup(
+      BuildContext context, String familyGroupId) async {
+    await Provider.of<FamilyViewModel>(context, listen: false)
+        .deleteFamilyGroup(familyGroupId);
   }
 
-  void _showAddDialog(BuildContext context, String entityType, Function(String) onAdd) {
+  void _showAddDialog(
+      BuildContext context, String entityType, Function(String) onAdd) {
     final TextEditingController controller = TextEditingController();
     showDialog(
       context: context,

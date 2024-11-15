@@ -45,9 +45,11 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
     if (_selectedFamilyGroupId == null) return;
 
     // Add the user to the selected family group and house (if chosen)
-    await _familyService.addMemberToFamilyGroup(_selectedFamilyGroupId!, widget.userId);
+    await _familyService.addMemberToFamilyGroup(
+        _selectedFamilyGroupId!, widget.userId);
     if (_selectedHouseId != null) {
-      await _familyService.addMemberToHouse(_selectedFamilyGroupId!, _selectedHouseId!, widget.userId);
+      await _familyService.addMemberToHouse(
+          _selectedFamilyGroupId!, _selectedHouseId!, widget.userId);
     }
 
     // Navigate to main screen

@@ -28,9 +28,11 @@ class _AddEditGiftScreenState extends State<AddEditGiftScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.gift?.name ?? '');
-    _descriptionController = TextEditingController(text: widget.gift?.description ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.gift?.description ?? '');
     _urlController = TextEditingController(text: widget.gift?.url ?? '');
-    _categoryController = TextEditingController(text: widget.gift?.category ?? '');
+    _categoryController =
+        TextEditingController(text: widget.gift?.category ?? '');
   }
 
   @override
@@ -50,7 +52,8 @@ class _AddEditGiftScreenState extends State<AddEditGiftScreen> {
       name: _nameController.text,
       description: _descriptionController.text,
       url: _urlController.text.isNotEmpty ? _urlController.text : null,
-      category: _categoryController.text.isNotEmpty ? _categoryController.text : null,
+      category:
+          _categoryController.text.isNotEmpty ? _categoryController.text : null,
       price: null,
       reservedBy: null,
       purchasedBy: null,
@@ -63,7 +66,8 @@ class _AddEditGiftScreenState extends State<AddEditGiftScreen> {
       if (widget.gift == null) {
         await widget.giftService.addGift(widget.userId, newGift);
       } else {
-        await widget.giftService.updateGift(widget.userId, newGift.id, newGift.toFirestore());
+        await widget.giftService
+            .updateGift(widget.userId, newGift.id, newGift.toFirestore());
       }
       Navigator.of(context).pop();
     } catch (e) {
@@ -84,12 +88,14 @@ class _AddEditGiftScreenState extends State<AddEditGiftScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: ListView( // Changed to ListView to prevent overflow
+          child: ListView(
+            // Changed to ListView to prevent overflow
             children: [
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(labelText: 'Gift Name'),
-                validator: (value) => value!.isEmpty ? 'Please enter a name' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Please enter a name' : null,
               ),
               TextFormField(
                 controller: _descriptionController,
