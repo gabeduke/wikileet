@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:wikileet/models/family_group.dart';
-import 'package:wikileet/models/user.dart';
+import 'package:wikileet/models/user.dart' as app_user;
 import 'package:wikileet/services/family_service.dart';
 import 'package:wikileet/services/user_service.dart';
 import '../models/house.dart';
@@ -12,8 +12,8 @@ class FamilyViewModel with ChangeNotifier {
   
   String? familyId;
   String? houseId;
-  List<User> familyMembers = [];
-  List<User> houseMembers = [];
+  List<app_user.User> familyMembers = [];
+  List<app_user.User> houseMembers = [];
   List<FamilyGroup> familyGroups = [];
   bool isLoading = false;
   String? errorMessage;
@@ -36,24 +36,36 @@ class FamilyViewModel with ChangeNotifier {
   Future<void> getUserFamilyGroup(String userId) async {
     print('Initializing FamilyViewModel for user: $userId');
     _setLoading(true);
-
     try {
       // First get initial data
       final user = await _userService.getUserProfile(userId);
       print('Initial user profile fetched: ${user?.familyGroupId}');
       
       if (user != null) {
-        familyId = user.familyGroupId;
-        houseId = user.houseId;
-
-        // If user has a family group, load initial data
-        if (familyId != null) {
-          await _loadInitialFamilyData();
+        if (user.familyGroupId != null) {
+          try {
+            // Try to load the family group
+            await _loadInitialFamilyData();
+            familyId = user.familyGroupId;
+            houseId = user.houseId;
+          } catch (e) {
+            print('Failed to load family data, resetting user family group: $e');
+            // If the family group doesn't exist, reset the user's data
+            await _userService.updateUser(userId, {
+              'familyGroupId': null,
+              'houseId': null
+            });
+            familyId = null;
+            houseId = null;
+            familyGroups = [];
+          }
         } else {
+          familyId = null;
+          houseId = null;
           familyGroups = [];
         }
-
-        // Start subscriptions after initial data is loaded
+        
+        // Always start subscriptions after attempting to load data
         _startSubscriptions(userId);
       }
       
@@ -73,25 +85,24 @@ class FamilyViewModel with ChangeNotifier {
     print('Loading initial family data for familyId: $familyId');
     if (familyId == null) return;
 
-    try {
-      final familyGroup = await _familyService.getFamilyGroupById(familyId!);
-      final houses = await _familyService.getHousesForFamilyGroup(familyId!);
-      
-      // Load house members in parallel
-      await Future.wait(houses.map((house) async {
-        house.members = await Future.wait(house.memberIds.map((memberId) async {
-          final member = await _userService.getUserProfile(memberId);
-          return member?.displayName ?? 'Unknown User';
-        }));
-      }));
-
-      familyGroup.houses = houses;
-      familyGroups = [familyGroup];
-      print('Initial family data loaded successfully');
-    } catch (e) {
-      print('Error loading initial family data: $e');
-      throw e;
+    final familyGroup = await _familyService.getFamilyGroupById(familyId!);
+    if (familyGroup == null) {
+      throw Exception('Family group not found');
     }
+
+    final houses = await _familyService.getHousesForFamilyGroup(familyId!);
+    
+    // Load house members in parallel
+    await Future.wait(houses.map((house) async {
+      house.members = await Future.wait(house.memberIds.map((memberId) async {
+        final member = await _userService.getUserProfile(memberId);
+        return member?.displayName ?? 'Unknown User';
+      }));
+    }));
+
+    familyGroup.houses = houses;
+    familyGroups = [familyGroup];
+    print('Initial family data loaded successfully');
   }
 
   void _startSubscriptions(String userId) {
@@ -208,7 +219,7 @@ class FamilyViewModel with ChangeNotifier {
   }
 
   /// Load all members of the family group
-  Future<List<User>> _loadFamilyMembers() async {
+  Future<List<app_user.User>> _loadFamilyMembers() async {
     if (familyId == null) return [];
     try {
       final memberIds = await _familyService.getFamilyMembers(familyId!);
@@ -220,7 +231,7 @@ class FamilyViewModel with ChangeNotifier {
   }
 
   /// Load all members of the specified house
-  Future<List<User>> _loadHouseMembers() async {
+  Future<List<app_user.User>> _loadHouseMembers() async {
     if (familyId == null || houseId == null) return [];
     try {
       final memberIds =
@@ -233,10 +244,10 @@ class FamilyViewModel with ChangeNotifier {
   }
 
   /// Helper to fetch user profiles by a list of user IDs
-  Future<List<User>> _fetchUsersByIds(List<String> userIds) async {
+  Future<List<app_user.User>> _fetchUsersByIds(List<String> userIds) async {
     return await Future.wait(userIds.map((id) async {
       return await _userService.getUserProfile(id) ??
-          User(uid: id, displayName: "Unknown", email: "", familyGroupId: '');
+          app_user.User(uid: id, displayName: "Unknown", email: "", familyGroupId: '');
     }));
   }
 

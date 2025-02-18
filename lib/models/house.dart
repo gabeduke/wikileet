@@ -6,12 +6,14 @@ class House {
   final String id;
   final String name;
   final List<String> memberIds; // Raw IDs fetched from Firestore
+  final String familyGroupId; // Add this to track which family the house belongs to
   List<String> members; // Display names for the UI
 
   House({
     required this.id,
     required this.name,
     required this.memberIds,
+    required this.familyGroupId,
     this.members = const [],
   });
 
@@ -20,7 +22,9 @@ class House {
     return House(
       id: doc.id,
       name: data['name'] ?? '',
-      memberIds: List<String>.from(data['members'] ?? data['memberIds'] ?? []),
+      memberIds: List<String>.from(data['members'] ?? []),
+      familyGroupId: data['familyGroupId'] ?? '',
+      members: const [], // This will be populated later with display names
     );
   }
 
@@ -28,6 +32,7 @@ class House {
     return {
       'name': name,
       'members': memberIds,
+      'familyGroupId': familyGroupId,
     };
   }
 }

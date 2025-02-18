@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:wikileet/screens/admin.dart';
-import 'package:wikileet/screens/family_list_screen.dart';
+import 'package:wikileet/screens/no_family_group_screen.dart';
 import 'package:wikileet/screens/gift_list_screen.dart';
+import 'package:wikileet/screens/family_list_screen.dart';  // Updated import
 import 'package:wikileet/viewmodels/family_viewmodel.dart';
 
 import '../providers/user_provider.dart';
@@ -13,153 +13,114 @@ class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  _MainNavigationScreenState createState() => _MainNavigationScreenState();
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
-  final AuthService _authService = AuthService();
-
   bool _isAdmin = false;
-  List<Widget> _screens = [];
+  List<Widget> _screens = [];  // Initialize with empty list instead of late
 
   @override
   void initState() {
     super.initState();
-    print('MainNavigationScreen initState called');
+    print('MainNavigationScreen: initState called');
     _checkAdminStatus();
   }
 
   Future<void> _checkAdminStatus() async {
-    print('Checking admin status...');
-    try {
-      final userId = Provider.of<UserProvider>(context, listen: false).userId;
-      print('Got userId: $userId');
-      
-      if (userId == null) {
-        print('No userId found, setting screens with non-admin status');
-        setState(() {
-          _isAdmin = false;
-          _screens = _buildScreens();
-        });
-        return;
-      }
-
-      print('Checking admin authorization for userId: $userId');
+    print('MainNavigationScreen: Checking admin status...');
+    final userId = Provider.of<UserProvider>(context, listen: false).userId;
+    print('MainNavigationScreen: Got userId: $userId');
+    if (userId != null) {
+      print('MainNavigationScreen: Checking admin authorization');
       final isAdmin = await Provider.of<FamilyViewModel>(context, listen: false)
           .checkAdminAuthorization(userId);
-      print('Admin check result: $isAdmin');
-
-      setState(() {
-        _isAdmin = isAdmin;
-        _screens = _buildScreens();
-      });
-      print('Screens built, count: ${_screens.length}');
-    } catch (e, stackTrace) {
-      print('Error checking admin status: $e');
-      print('Stack trace: $stackTrace');
-      setState(() {
-        _isAdmin = false;
-        _screens = _buildScreens();
-      });
+      print('MainNavigationScreen: Admin check result: $isAdmin');
+      if (mounted) {
+        setState(() {
+          _isAdmin = isAdmin;
+          _initializeScreens(userId);
+        });
+      }
     }
   }
 
-  List<Widget> _buildScreens() {
-    return [
-      FamilyListScreen(),
-      GiftListScreen(
-        userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-        isCurrentUser: true,
-      ),
-      if (_isAdmin) AdminInterfaceScreen(),
-    ];
-  }
-
-  void _onItemTapped(int index) {
+  void _initializeScreens(String userId) {
+    print('MainNavigationScreen: Initializing screens');
     setState(() {
-      _selectedIndex = index;
+      _screens = [
+        GiftListScreen(userId: userId, isCurrentUser: true),
+        const FamilyListScreen(),
+      ];
     });
-  }
-
-  Future<void> _signOut() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    await _authService.signOut(userProvider);
+    print('MainNavigationScreen: Screens built, count: ${_screens.length}');
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_screens.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+    print('MainNavigationScreen: Building with $_selectedIndex selected');
+    final userProvider = Provider.of<UserProvider>(context);
+    final userId = userProvider.userId;
+
+    // Check if user has no family group
+    if (userProvider.familyGroupId == null) {
+      print('MainNavigationScreen: No family group, redirecting to NoFamilyGroupScreen');
+      return const NoFamilyGroupScreen();
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        bool isWideScreen = constraints.maxWidth > 800;
+    // Show loading if userId is not available
+    if (userId == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-        Widget bodyContent;
+    // Initialize screens if empty
+    if (_screens.isEmpty) {
+      print('MainNavigationScreen: Screens empty, initializing');
+      _initializeScreens(userId);
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-        if (isWideScreen) {
-          // Wide screen logic: Admin replaces everything, else Family + Gift List side by side
-          if (_selectedIndex == 2 && _isAdmin) {
-            bodyContent = AdminInterfaceScreen();
-          } else {
-            bodyContent = Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: FamilyListScreen()),
-                Expanded(
-                  child: GiftListScreen(
-                    userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-                    isCurrentUser: true,
-                  ),
-                ),
-              ],
-            );
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('WikiLeet'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _signOut,
+          ),
+        ],
+      ),
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          if (index < _screens.length) {
+            setState(() {
+              _selectedIndex = index;
+            });
           }
-        } else {
-          // Narrow screen logic: Show the selected screen
-          bodyContent = _screens[_selectedIndex];
-        }
-
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('WikiLeet'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: _signOut,
-              ),
-            ],
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list),
+            label: 'My Gift List',
           ),
-          body: bodyContent,
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: (index) {
-              if (index < _screens.length) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              }
-            },
-            items: [
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.group),
-                label: 'Family',
-              ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.list),
-                label: 'My Gift List',
-              ),
-              if (_isAdmin)
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.admin_panel_settings),
-                  label: 'Admin',
-                ),
-            ],
+          BottomNavigationBarItem(
+            icon: Icon(Icons.group),
+            label: 'Family',
           ),
-        );
-      },
+        ],
+      ),
     );
+  }
+
+  Future<void> _signOut() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await userProvider.signOut();
   }
 }

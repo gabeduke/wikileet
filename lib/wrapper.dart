@@ -21,9 +21,10 @@ class Wrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        print('Auth state: ${snapshot.connectionState}, hasData: ${snapshot.hasData}');
+        print('Wrapper: Auth state: ${snapshot.connectionState}, hasData: ${snapshot.hasData}');
         
         if (snapshot.connectionState == ConnectionState.waiting) {
+          print('Wrapper: Auth state is waiting');
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
@@ -31,6 +32,7 @@ class Wrapper extends StatelessWidget {
 
         final user = snapshot.data;
         if (user == null) {
+          print('Wrapper: No authenticated user found');
           return LoginScreen(
             onSignIn: () async {
               try {
@@ -48,32 +50,42 @@ class Wrapper extends StatelessWidget {
           );
         }
 
-        print('User authenticated, checking family group');
+        print('Wrapper: User authenticated with ID: ${user.uid}');
         
-        // Initialize and listen to family group provider
         final familyGroupProvider = Provider.of<FamilyGroupProvider>(context);
+        final userProvider = Provider.of<UserProvider>(context);
+        final familyViewModel = Provider.of<FamilyViewModel>(context, listen: false);
         
-        // Initialize stream if needed
+        // Initialize providers if needed
         if (!familyGroupProvider.isInitialized) {
+          print('Wrapper: Initializing family group provider');
           familyGroupProvider.initializeStream(user.uid);
         }
 
-        // Show loading state while initializing or loading
-        if (familyGroupProvider.isLoading) {
-          print('FamilyGroupProvider is loading');
+        // Show loading while providers are initializing or we're waiting for initial user data
+        if (familyGroupProvider.isLoading || !userProvider.isInitialized) {
+          print('Wrapper: Still loading... FGP loading: ${familyGroupProvider.isLoading}, UP initialized: ${userProvider.isInitialized}');
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        // If initialized but no data, show no family group screen
-        if (familyGroupProvider.isInitialized && !familyGroupProvider.hasData) {
-          print('No family group data found');
+        // Check if user has a family group
+        final hasFamilyGroup = userProvider.familyGroupId != null;
+        print('Wrapper: User familyGroupId: ${userProvider.familyGroupId}');
+
+        if (hasFamilyGroup) {
+          print('Wrapper: User has family group, initializing FamilyViewModel');
+          // Initialize FamilyViewModel when user has a family group
+          familyViewModel.getUserFamilyGroup(user.uid);
+        }
+
+        if (!hasFamilyGroup) {
+          print('Wrapper: User has no family group, showing NoFamilyGroupScreen');
           return const NoFamilyGroupScreen();
         }
 
-        // We have data, show main navigation
-        print('Family group data found, showing main navigation');
+        print('Wrapper: User has family group, showing main navigation');
         return const MainNavigationScreen();
       },
     );

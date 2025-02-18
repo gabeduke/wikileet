@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
-import 'package:wikileet/models/user.dart';
+import 'package:wikileet/models/user.dart' as app_user;
 
 class UserService {
   final FirebaseFirestore _firestore;
   final auth.FirebaseAuth? _auth;
-  User? _cachedUser;
+  app_user.User? _cachedUser;
   bool _isAddingUser = false;
 
   UserService({FirebaseFirestore? firestore, auth.FirebaseAuth? auth})
@@ -78,7 +78,7 @@ class UserService {
   }
 
   /// Fetch a user profile by their user ID
-  Future<User?> getUserProfile(String userId) async {
+  Future<app_user.User?> getUserProfile(String userId) async {
     print('Fetching user profile for: $userId');
     if (_cachedUser != null && _cachedUser!.uid == userId) {
       print('Returning cached user profile');
@@ -90,7 +90,7 @@ class UserService {
       final userDoc = await _firestore.collection('users').doc(userId).get();
       if (userDoc.exists) {
         print('User doc exists, creating User object');
-        _cachedUser = User.fromJson(userDoc); // Cache the result
+        _cachedUser = app_user.User.fromJson(userDoc); // Cache the result
         return _cachedUser;
       }
       print('No user document found for ID: $userId');
@@ -103,15 +103,15 @@ class UserService {
   }
 
   /// Add a user to Firestore
-  Future<void> addUser(User user) async {
+  Future<void> addUser(app_user.User user) async {
     await _firestore.collection('users').doc(user.uid).set(user.toJson());
   }
 
   /// Get a user document by their UID
-  Future<User?> getUser(String uid) async {
+  Future<app_user.User?> getUser(String uid) async {
     final docSnapshot = await _firestore.collection('users').doc(uid).get();
     if (docSnapshot.exists) {
-      return User.fromJson(docSnapshot);
+      return app_user.User.fromJson(docSnapshot);
     }
     return null;
   }

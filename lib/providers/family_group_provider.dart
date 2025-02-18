@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import '../models/family_group.dart';
+import '../models/house.dart';  // Add House model import
 
 class FamilyGroupProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -17,9 +18,9 @@ class FamilyGroupProvider with ChangeNotifier {
   bool get hasData => _groups.isNotEmpty;
 
   void initializeStream(String userId) {
-    print('Initializing FamilyGroupProvider stream for user: $userId');
+    print('FamilyGroupProvider: Initializing stream for user: $userId');
     if (_userId == userId && _isInitialized) {
-      print('Stream already initialized for this user');
+      print('FamilyGroupProvider: Stream already initialized for this user');
       return;
     }
 
@@ -28,37 +29,65 @@ class FamilyGroupProvider with ChangeNotifier {
     _setLoading(true);
     
     try {
-      final query = _firestore
-          .collection('familyGroups')
-          .where('members', arrayContains: userId);
-
-      _subscription = query.snapshots().listen(
-        (snapshot) {
-          print('Received family groups snapshot with ${snapshot.docs.length} docs');
-          _groups = snapshot.docs
-              .map((doc) {
-                if (!doc.exists || doc.data() == null) return null;
-                return FamilyGroup.fromFirestore(doc);
-              })
-              .where((group) => group != null)
-              .cast<FamilyGroup>()
-              .toList();
-          
+      print('FamilyGroupProvider: Setting up streams for user: $userId');
+      
+      // Listen to user document for both familyGroupId and houseId
+      final userDoc = _firestore.collection('users').doc(userId).snapshots();
+      
+      _subscription = userDoc.listen((userSnapshot) {
+        final userData = userSnapshot.data();
+        final familyGroupId = userData?['familyGroupId'] as String?;
+        final houseId = userData?['houseId'] as String?;
+        
+        print('FamilyGroupProvider: User familyGroupId: $familyGroupId, houseId: $houseId');
+        
+        if (familyGroupId == null || houseId == null) {
+          print('FamilyGroupProvider: User missing family group or house assignment');
+          _groups = [];
           _setLoading(false);
           if (!_isInitialized) {
             _isInitialized = true;
           }
           notifyListeners();
-        },
-        onError: (error) {
-          print('Error in family groups stream: $error');
-          _setLoading(false);
-          _isInitialized = false;
-          notifyListeners();
-        },
-      );
+          return;
+        }
+
+        // Get both the family group and house data
+        _firestore
+            .collection('familyGroups')
+            .doc(familyGroupId)
+            .snapshots()
+            .listen((groupSnapshot) {
+          if (!groupSnapshot.exists) {
+            print('FamilyGroupProvider: Family group $familyGroupId not found');
+            _groups = [];
+          } else {
+            print('FamilyGroupProvider: Processing family group ${groupSnapshot.id}');
+            final group = FamilyGroup.fromFirestore(groupSnapshot);
+            
+            // Get the house data
+            _firestore
+                .collection('houses')
+                .doc(houseId)
+                .get()
+                .then((houseDoc) {
+              if (houseDoc.exists) {
+                final house = House.fromFirestore(houseDoc);
+                group.houses = [house];  // Assign the user's current house
+                _groups = [group];
+              }
+              
+              _setLoading(false);
+              if (!_isInitialized) {
+                _isInitialized = true;
+              }
+              notifyListeners();
+            });
+          }
+        });
+      });
     } catch (e) {
-      print('Error initializing family groups stream: $e');
+      print('FamilyGroupProvider: Error initializing streams: $e');
       _setLoading(false);
       _isInitialized = false;
     }
@@ -84,46 +113,104 @@ class FamilyGroupProvider with ChangeNotifier {
   }
 
   Future<void> createFamilyGroup(String name, String creatorId) async {
+    print('FamilyGroupProvider: Creating new family group with name: $name for user: $creatorId');
     try {
+      final batch = _firestore.batch();
+      
+      // Create new family group document
+      final groupRef = _firestore.collection('familyGroups').doc();
+      
+      // Create initial house document
+      final houseRef = _firestore.collection('houses').doc();
+      final houseData = {
+        'name': 'Main House',  // Default house name
+        'members': [creatorId],
+        'familyGroupId': groupRef.id,
+      };
+      
+      // Family group data now includes the initial house
       final groupData = {
         'name': name,
         'members': [creatorId],
         'createdAt': FieldValue.serverTimestamp(),
         'createdBy': creatorId,
-        'houseIds': [],
+        'houseIds': [houseRef.id],  // Include the initial house ID
       };
       
-      final docRef = await _firestore.collection('familyGroups').add(groupData);
+      // Set up the batch operations
+      batch.set(groupRef, groupData);
+      batch.set(houseRef, houseData);
       
-      // Update the creator's user document with the new family group ID
-      await _firestore.collection('users').doc(creatorId).update({
-        'familyGroupId': docRef.id,
+      // Update user document with both family group and house IDs
+      final userRef = _firestore.collection('users').doc(creatorId);
+      batch.update(userRef, {
+        'familyGroupId': groupRef.id,
+        'houseId': houseRef.id,
       });
+
+      // Commit all operations atomically
+      await batch.commit();
+      
+      print('FamilyGroupProvider: Created family group with ID: ${groupRef.id} and house with ID: ${houseRef.id}');
     } catch (e) {
-      if (kDebugMode) {
-        print('Error creating family group: $e');
-      }
+      print('FamilyGroupProvider: Error creating family group: $e');
       rethrow;
     }
   }
 
   Future<void> joinFamilyGroup(String groupId, String userId) async {
     try {
-      // Verify the group exists first
+      // First verify the group exists
       final groupDoc = await _firestore.collection('familyGroups').doc(groupId).get();
       if (!groupDoc.exists) {
         throw 'Family group not found';
       }
 
-      // Add user to group
-      await _firestore.collection('familyGroups').doc(groupId).update({
-        'members': FieldValue.arrayUnion([userId]),
-      });
+      // Get the first house in the family group (we can add house selection later)
+      final housesQuery = await _firestore
+          .collection('houses')
+          .where('familyGroupId', isEqualTo: groupId)
+          .limit(1)
+          .get();
+
+      if (housesQuery.docs.isEmpty) {
+        throw 'No houses found in this family group';
+      }
+
+      final houseId = housesQuery.docs.first.id;
+
+      // Use a batch to update all related documents
+      final batch = _firestore.batch();
+
+      // Add user to family group
+      batch.update(
+        _firestore.collection('familyGroups').doc(groupId),
+        {
+          'members': FieldValue.arrayUnion([userId]),
+        },
+      );
+
+      // Add user to house
+      batch.update(
+        _firestore.collection('houses').doc(houseId),
+        {
+          'members': FieldValue.arrayUnion([userId]),
+        },
+      );
+
+      // Update user's familyGroupId and houseId
+      batch.update(
+        _firestore.collection('users').doc(userId),
+        {
+          'familyGroupId': groupId,
+          'houseId': houseId,
+        },
+      );
+
+      // Commit all changes
+      await batch.commit();
       
-      // Update user's familyGroupId
-      await _firestore.collection('users').doc(userId).update({
-        'familyGroupId': groupId,
-      });
+      print('User $userId joined family group $groupId and house $houseId');
     } catch (e) {
       if (kDebugMode) {
         print('Error joining family group: $e');
