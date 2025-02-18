@@ -79,20 +79,19 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
   /// Join the selected family group and house, ensuring bidirectional updates.
   Future<void> _joinFamilyGroup() async {
     if (_selectedFamilyGroupId == null) return;
-
     try {
-      // Add the user to the selected family group and house (if chosen)
-      await _familyService.addMemberToFamilyGroup(
-          _selectedFamilyGroupId!, widget.userId);
+      // Use setFamilyAndHouseForUser to handle both family group and house assignment in one transaction
+      await _familyService.setFamilyAndHouseForUser(
+          _selectedFamilyGroupId!, 
+          _selectedHouseId,  // This can be null if no house is selected
+          widget.userId
+      );
 
-      if (_selectedHouseId != null) {
-        await _familyService.addMemberToHouse(
-            _selectedFamilyGroupId!, _selectedHouseId!, widget.userId);
-        
-        // Update the UserProvider state
-        if (mounted) {
-          final userProvider = Provider.of<UserProvider>(context, listen: false);
-          userProvider.setFamilyGroupId(_selectedFamilyGroupId!);
+      // Update the UserProvider state
+      if (mounted) {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        userProvider.setFamilyGroupId(_selectedFamilyGroupId!);
+        if (_selectedHouseId != null) {
           userProvider.setHouseId(_selectedHouseId!);
         }
       }

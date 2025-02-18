@@ -227,21 +227,20 @@ I'm building a family gift list app using Flutter and Firestore (Firebase). The 
 # WikiLeet Development Progress
 
 ## Active Implementation
-Currently working on Gift Management:
-1. ✅ Gift List Integration:
-   - [x] Implemented gift list view per user
-   - [x] Added gift creation/editing with form validation
-   - [x] Added gift purchase/reservation system
-   - [x] Implemented gift visibility controls
-   - [x] Added URL handling for gift links
-   - [x] Added real-time gift status updates
+Currently working on Family Group and House Structure:
+1. 🏃‍♂️ Family Group and House Refactoring:
+   - [ ] Fix house assignments when users select a house
+   - [ ] Add "Create House" button functionality
+   - [ ] Update layout for family list and gift list side-by-side view on larger screens
+   - [ ] Review and fix any mixed up family group vs house creation logic
 
-2. 🏃‍♂️ Next Focus - Gift List Enhancement:
-   - [ ] Add gift search functionality
-   - [ ] Implement gift filtering by category
-   - [ ] Add batch gift operations
-   - [ ] Implement gift sorting options
-   - [ ] Add gift recommendations
+## Architecture Notes
+- Family Groups: Represent the top-level workspace where users collaborate
+- Houses: Represent teams or sub-groups within a family group
+- Relationships:
+  - Users belong to one Family Group
+  - Within a Family Group, users can be part of different Houses
+  - Houses are used for further organization within the Family Group
 
 ## Completed Features
 - Basic project structure and Firebase integration
@@ -263,31 +262,35 @@ Currently working on Gift Management:
   - Gift URL integration
 
 ## Pending Features
-1. Gift List Enhancement
+1. Family Group and House Structure
+   - [ ] Fix house assignment functionality
+   - [ ] Implement proper house creation flow
+   - [ ] Update UI for better organization display
+   - [ ] Add house management features
+2. Gift List Enhancement
    - [ ] Add search and filtering capabilities
    - [ ] Implement gift recommendations
    - [ ] Add gift sorting options
    - [ ] Add batch operations
-
-2. Security & Data Validation
+3. Security & Data Validation
    - [ ] Review and enhance Firestore security rules
    - [ ] Implement robust family group access controls
    - [ ] Add comprehensive data validation
    - [ ] Add error handling and recovery mechanisms
-
-3. UI/UX Improvements
-   - [ ] Implement responsive layouts
+4. UI/UX Improvements
+   - [ ] Implement responsive layouts with side-by-side views
    - [ ] Enhance navigation patterns
    - [ ] Add loading states and error feedback
    - [ ] Implement modern UI components
    - [ ] Add accessibility features
 
 ## Implementation Order
-1. 🏃‍♂️ Current: Gift List Enhancements (Search & Filter)
-2. Security Rules & Validation
-3. UI/UX Improvements
-4. Testing Infrastructure
-5. Polish and Deploy
+1. 🏃‍♂️ Current: Family Group and House Structure Refactoring
+2. Gift List Enhancements
+3. Security Rules & Validation
+4. UI/UX Improvements
+5. Testing Infrastructure
+6. Polish and Deploy
 
 ## Technical Debt
 - Review and optimize Firebase queries

@@ -354,4 +354,9 @@ class FamilyViewModel with ChangeNotifier {
       return null; // Return null if no user is found
     }
   }
+
+  /// Get a user profile by ID - publicly accessible method
+  Future<app_user.User?> getUserProfile(String userId) {
+    return _userService.getUserProfile(userId);
+  }
 }

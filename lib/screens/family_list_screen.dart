@@ -60,6 +60,11 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
                         color: hasHouses ? Colors.black : Colors.grey,
                       ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.add_home),
+                      tooltip: 'Create House',
+                      onPressed: () => _showCreateHouseDialog(context, family.id),
+                    ),
                   ],
                 ),
                 initiallyExpanded: true,
@@ -95,61 +100,175 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
     );
   }
 
+  Future<void> _showCreateHouseDialog(BuildContext context, String familyGroupId) async {
+    final nameController = TextEditingController();
+    
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create House'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Create a new house in your family group',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'House Name',
+                hintText: 'Enter the house name',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (nameController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a house name')),
+                );
+                return;
+              }
+
+              try {
+                final familyViewModel = Provider.of<FamilyViewModel>(context, listen: false);
+                await familyViewModel.addHouse(familyGroupId, nameController.text.trim());
+                
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('House created successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to create house: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHouseTile(
       BuildContext context, String familyGroupId, House house, String userId) {
     return Consumer<FamilyViewModel>(
       builder: (context, familyViewModel, child) {
+        final isCurrentHouse = house.id == familyViewModel.houseId;
         return ExpansionTile(
-          title: Text(house.name, style: const TextStyle(color: Colors.blueAccent)),
+          title: Row(
+            children: [
+              Text(
+                house.name,
+                style: TextStyle(
+                  color: Colors.blueAccent,
+                  fontWeight: isCurrentHouse ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              if (isCurrentHouse) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.check_circle, color: Colors.green, size: 16),
+              ],
+            ],
+          ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (_showJoinButtons)
+              if (_showJoinButtons && !isCurrentHouse)
                 ElevatedButton(
                   onPressed: () async {
-                    await familyViewModel.selectFamilyAndHouse(
-                        familyGroupId, house.id, userId);
-
+                    // Show loading indicator
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text("Added to house: ${house.name}")),
+                        const SnackBar(
+                          content: Text("Changing house..."),
+                          duration: Duration(seconds: 1),
+                        ),
                       );
+                    }
+
+                    try {
+                      await familyViewModel.selectFamilyAndHouse(
+                          familyGroupId, house.id, userId);
+                      
+                      if (context.mounted) {
+                        // Hide the join buttons after successful change
+                        setState(() {
+                          _showJoinButtons = false;
+                        });
+                        
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Changed to house: ${house.name}"),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Failed to change house: $e"),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
                   },
                   child: const Text('Join House'),
                 ),
-              if (house.members.isNotEmpty) const Icon(Icons.expand_more),
+              if (house.memberIds.isNotEmpty) const Icon(Icons.expand_more),
             ],
           ),
-          children: house.members.isNotEmpty
-              ? house.members
-              .map((username) => ListTile(
-            title: Text(username),
-            onTap: () {
-              final selectedUserId = familyViewModel.getUserIdByUsername(username);
-              if (selectedUserId != null) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => GiftListScreen(
-                      userId: selectedUserId,
-                      isCurrentUser: selectedUserId == userId,
-                    ),
+          children: house.memberIds.isEmpty
+              ? [
+                  const ListTile(
+                    title: Text('No members found in this house.'),
                   ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("User ID not found for $username")),
-                );
-              }
-            },
-          ))
-              .toList()
-              : [
-            const ListTile(
-              title: Text('No members found in this house.'),
-            ),
-          ],
+                ]
+              : house.memberIds.map((memberId) => FutureBuilder(
+                    future: familyViewModel.getUserProfile(memberId),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data != null) {
+                        final member = snapshot.data!;
+                        return ListTile(
+                          title: Text(member.displayName),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => GiftListScreen(
+                                  userId: member.uid,
+                                  isCurrentUser: member.uid == userId,
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      }
+                      return const ListTile(
+                        title: Text('Loading member...'),
+                      );
+                    },
+                  )).toList(),
         );
       },
     );
