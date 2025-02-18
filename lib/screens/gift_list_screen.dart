@@ -13,11 +13,13 @@ import '../widgets/gift_filter_sheet.dart';
 class GiftListScreen extends StatefulWidget {
   final String userId;
   final bool isCurrentUser;
+  final bool useInternalScaffold;  // Add this parameter
 
   const GiftListScreen({
     super.key,
     required this.userId,
     required this.isCurrentUser,
+    this.useInternalScaffold = true,  // Default to true for backward compatibility
   });
 
   @override
@@ -29,14 +31,20 @@ class _GiftListScreenState extends State<GiftListScreen> {
   String? _selectedCategory;
   GiftSortOption _sortOption = GiftSortOption.dateAdded;
   final TextEditingController _searchController = TextEditingController();
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    // Initialize gift stream for this user
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<GiftProvider>().initializeGiftStreamForUser(widget.userId);
-    });
+    // Initialize gift stream for this user only once
+    if (!_isInitialized) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<GiftProvider>().initializeGiftStreamForUser(widget.userId);
+          _isInitialized = true;
+        }
+      });
+    }
   }
 
   @override
@@ -97,92 +105,131 @@ class _GiftListScreenState extends State<GiftListScreen> {
           stream: userProvider.getUserStream(widget.userId),
           builder: (context, userSnapshot) {
             if (!userSnapshot.hasData) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
+              return const Center(child: CircularProgressIndicator());
             }
 
             final user = userSnapshot.data!;
-
-            return Scaffold(
-              appBar: AppBar(
-                title: Text(
-                  widget.isCurrentUser
-                      ? 'My Wish List'
-                      : '${user.displayName}\'s Wish List',
-                ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.filter_list),
-                    onPressed: _showFilterSheet,
-                    tooltip: 'Filter and sort',
-                  ),
-                  if (widget.isCurrentUser)
-                    IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: () => _showAddGiftDialog(context),
-                      tooltip: 'Add gift',
+            final content = Column(
+              children: [
+                if (!widget.useInternalScaffold) ...[
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GiftSearchBar(
+                            controller: _searchController,
+                            onChanged: (query) {
+                              setState(() {
+                                _searchQuery = query;
+                              });
+                            },
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.filter_list),
+                          onPressed: _showFilterSheet,
+                          tooltip: 'Filter and sort',
+                        ),
+                        if (widget.isCurrentUser)
+                          IconButton(
+                            icon: const Icon(Icons.add),
+                            onPressed: () => _showAddGiftDialog(context),
+                            tooltip: 'Add gift',
+                          ),
+                      ],
                     ),
+                  ),
                 ],
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(60),
-                  child: GiftSearchBar(
-                    controller: _searchController,
-                    onChanged: (query) {
-                      setState(() {
-                        _searchQuery = query;
-                      });
+                Expanded(
+                  child: StreamBuilder<List<Gift>>(
+                    stream: giftProvider.giftsForUser,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('No gifts found'),
+                              if (widget.isCurrentUser)
+                                ElevatedButton(
+                                  onPressed: () => _showAddGiftDialog(context),
+                                  child: const Text('Add Your First Gift'),
+                                ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      final filteredGifts = _filterAndSortGifts(snapshot.data!);
+
+                      if (filteredGifts.isEmpty) {
+                        return const Center(
+                          child: Text('No gifts match your search'),
+                        );
+                      }
+
+                      return ListView.builder(
+                        itemCount: filteredGifts.length,
+                        itemBuilder: (context, index) {
+                          final gift = filteredGifts[index];
+                          return _buildGiftCard(context, gift);
+                        },
+                      );
                     },
                   ),
                 ),
-              ),
-              body: StreamBuilder<List<Gift>>(
-                stream: giftProvider.giftsForUser,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('No gifts found'),
-                          if (widget.isCurrentUser)
-                            ElevatedButton(
-                              onPressed: () => _showAddGiftDialog(context),
-                              child: const Text('Add Your First Gift'),
-                            ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  final filteredGifts = _filterAndSortGifts(snapshot.data!);
-
-                  if (filteredGifts.isEmpty) {
-                    return const Center(
-                      child: Text('No gifts match your search'),
-                    );
-                  }
-
-                  return ListView.builder(
-                    itemCount: filteredGifts.length,
-                    itemBuilder: (context, index) {
-                      final gift = filteredGifts[index];
-                      return _buildGiftCard(context, gift);
-                    },
-                  );
-                },
-              ),
-              floatingActionButton: widget.isCurrentUser
-                  ? FloatingActionButton(
-                      onPressed: () => _showAddGiftDialog(context),
-                      child: const Icon(Icons.add),
-                    )
-                  : null,
+              ],
             );
+
+            if (widget.useInternalScaffold) {
+              return Scaffold(
+                appBar: AppBar(
+                  title: Text(
+                    widget.isCurrentUser
+                        ? 'My Wish List'
+                        : '${user.displayName}\'s Wish List',
+                  ),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.filter_list),
+                      onPressed: _showFilterSheet,
+                      tooltip: 'Filter and sort',
+                    ),
+                    if (widget.isCurrentUser)
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () => _showAddGiftDialog(context),
+                        tooltip: 'Add gift',
+                      ),
+                  ],
+                  bottom: PreferredSize(
+                    preferredSize: const Size.fromHeight(60),
+                    child: GiftSearchBar(
+                      controller: _searchController,
+                      onChanged: (query) {
+                        setState(() {
+                          _searchQuery = query;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+                body: content,
+                floatingActionButton: widget.isCurrentUser
+                    ? FloatingActionButton(
+                        onPressed: () => _showAddGiftDialog(context),
+                        child: const Icon(Icons.add),
+                      )
+                    : null,
+              );
+            }
+
+            return content;
           },
         );
       },

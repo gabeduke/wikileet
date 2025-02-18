@@ -26,15 +26,29 @@ class FamilyViewModel with ChangeNotifier {
 
   @override
   void dispose() {
+    _cancelSubscriptions();
+    super.dispose();
+  }
+
+  void _cancelSubscriptions() {
+    print('Cancelling all subscriptions');
     _familyGroupSubscription?.cancel();
     _housesSubscription?.cancel();
     _userSubscription?.cancel();
-    super.dispose();
+    
+    _familyGroupSubscription = null;
+    _housesSubscription = null;
+    _userSubscription = null;
   }
 
   /// Initialize the view model with user data and start subscriptions
   Future<void> getUserFamilyGroup(String userId) async {
     print('Initializing FamilyViewModel for user: $userId');
+    if (_isDataLoaded) {
+      print('Data already loaded, skipping initialization');
+      return;
+    }
+
     _setLoading(true);
     try {
       // First get initial data
@@ -42,12 +56,13 @@ class FamilyViewModel with ChangeNotifier {
       print('Initial user profile fetched: ${user?.familyGroupId}');
       
       if (user != null) {
+        familyId = user.familyGroupId;
+        houseId = user.houseId;
+
         if (user.familyGroupId != null) {
           try {
             // Try to load the family group
             await _loadInitialFamilyData();
-            familyId = user.familyGroupId;
-            houseId = user.houseId;
           } catch (e) {
             print('Failed to load family data, resetting user family group: $e');
             // If the family group doesn't exist, reset the user's data
@@ -59,13 +74,9 @@ class FamilyViewModel with ChangeNotifier {
             houseId = null;
             familyGroups = [];
           }
-        } else {
-          familyId = null;
-          houseId = null;
-          familyGroups = [];
         }
         
-        // Always start subscriptions after attempting to load data
+        // Start subscriptions after initial data load
         _startSubscriptions(userId);
       }
       
@@ -108,21 +119,30 @@ class FamilyViewModel with ChangeNotifier {
   void _startSubscriptions(String userId) {
     print('Starting real-time subscriptions');
     
-    // Subscribe to user profile changes
+    // Cancel any existing subscriptions first
     _userSubscription?.cancel();
+    _familyGroupSubscription?.cancel();
+    _housesSubscription?.cancel();
+    
+    // Subscribe to user profile changes
     _userSubscription = _familyService.subscribeToUserProfile(userId).listen(
       (userData) {
         print('User profile update received: $userData');
         final updatedFamilyGroupId = userData['familyGroupId'];
         final updatedHouseId = userData['houseId'];
 
+        // Only update if values actually changed
         if (updatedFamilyGroupId != familyId) {
           familyId = updatedFamilyGroupId;
-          _subscribeToFamilyGroup();
+          if (familyId != null) {
+            _subscribeToFamilyGroup();
+          } else {
+            familyGroups.clear();
+            notifyListeners();
+          }
         }
         if (updatedHouseId != houseId) {
           houseId = updatedHouseId;
-          _loadHouseMembers();
         }
       },
       onError: (e) => print('Error in user subscription: $e'),
@@ -134,37 +154,55 @@ class FamilyViewModel with ChangeNotifier {
     }
   }
 
-  /// Subscribe to family group updates
   void _subscribeToFamilyGroup() {
     print('_subscribeToFamilyGroup called, familyId: $familyId');
     if (familyId == null) return;
 
     _familyGroupSubscription?.cancel(); // Cancel any existing subscription
+    _housesSubscription?.cancel(); // Cancel house subscription too
+
     print('Subscribing to family group: $familyId');
-    _familyGroupSubscription = _familyService.subscribeToFamilyGroup(familyId!).listen((familyGroup) {
-      print('Family group update received: ${familyGroup?.name}');
-      if (familyGroup != null) {
-        familyGroups = [familyGroup];
-        _subscribeToHouses(); // Fetch houses for this family group
+    _familyGroupSubscription = _familyService.subscribeToFamilyGroup(familyId!).listen(
+      (familyGroup) {
+        print('Family group update received: ${familyGroup?.name}');
+        if (familyGroup != null) {
+          familyGroups = [familyGroup];
+          // Subscribe to houses in a separate stream
+          _subscribeToHouses();
+        } else {
+          familyGroups.clear();
+        }
+        notifyListeners();
+      },
+      onError: (e) {
+        print('Error in family group subscription: $e');
+        errorMessage = 'Failed to load family group: $e';
         notifyListeners();
       }
-    });
+    );
   }
 
-  /// Subscribe to house updates
   void _subscribeToHouses() {
     print('_subscribeToHouses called, familyId: $familyId');
     if (familyId == null) return;
 
     _housesSubscription?.cancel(); // Cancel any existing subscription
     print('Subscribing to houses for family: $familyId');
-    _housesSubscription = _familyService.subscribeToHouses(familyId!).listen((houses) {
-      print('Houses update received, count: ${houses.length}');
-      if (familyGroups.isNotEmpty) {
-        familyGroups[0].houses = houses;
+    
+    _housesSubscription = _familyService.subscribeToHouses(familyId!).listen(
+      (houses) {
+        print('Houses update received, count: ${houses.length}');
+        if (familyGroups.isNotEmpty) {
+          familyGroups[0].houses = houses;
+          notifyListeners();
+        }
+      },
+      onError: (e) {
+        print('Error in houses subscription: $e');
+        errorMessage = 'Failed to load houses: $e';
         notifyListeners();
       }
-    });
+    );
   }
 
   /// Check if the user is a global admin
@@ -331,9 +369,13 @@ class FamilyViewModel with ChangeNotifier {
 
   /// Reset data to allow reloading if needed
   void resetData() {
+    _cancelSubscriptions();
     _isDataLoaded = false;
     familyGroups.clear();
     houseMembers.clear();
+    familyId = null;
+    houseId = null;
+    errorMessage = null;
     notifyListeners();
   }
 

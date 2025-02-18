@@ -6,7 +6,12 @@ import '../models/house.dart';
 import 'gift_list_screen.dart';
 
 class FamilyListScreen extends StatefulWidget {
-  const FamilyListScreen({super.key});
+  final bool useInternalScaffold;
+
+  const FamilyListScreen({
+    super.key,
+    this.useInternalScaffold = true,
+  });
 
   @override
   _FamilyListScreenState createState() => _FamilyListScreenState();
@@ -18,86 +23,127 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
   @override
   void initState() {
     super.initState();
-    final userId = Provider.of<UserProvider>(context, listen: false).userId;
-    Future.microtask(() => Provider.of<FamilyViewModel>(context, listen: false)
-        .getUserFamilyGroup(userId!));
+    // Delay the initialization to avoid calling build during initState
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final userId = Provider.of<UserProvider>(context, listen: false).userId;
+        if (userId != null) {
+          final familyViewModel = Provider.of<FamilyViewModel>(context, listen: false);
+          if (!familyViewModel.isInitialized) {
+            familyViewModel.getUserFamilyGroup(userId);
+          }
+        }
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final userId = Provider.of<UserProvider>(context, listen: false).userId;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Family List"),
-      ),
-      body: Consumer<FamilyViewModel>(
-        builder: (context, familyViewModel, child) {
-          if (familyViewModel.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    final content = Consumer<FamilyViewModel>(
+      builder: (context, familyViewModel, child) {
+        if (familyViewModel.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          if (familyViewModel.errorMessage != null) {
-            return Center(child: Text(familyViewModel.errorMessage!));
-          }
+        if (familyViewModel.errorMessage != null) {
+          return Center(child: Text(familyViewModel.errorMessage!));
+        }
 
-          if (familyViewModel.familyGroups.isEmpty) {
-            return const Center(child: Text('No family groups found.'));
-          }
+        if (familyViewModel.familyGroups.isEmpty) {
+          return const Center(child: Text('No family groups found.'));
+        }
 
-          return ListView(
-            children: familyViewModel.familyGroups.map((family) {
-              final hasHouses = family.houses.isNotEmpty;
-
-              return ExpansionTile(
-                title: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Column(
+          children: [
+            if (!widget.useInternalScaffold) ...[
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text(
-                      family.name,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: hasHouses ? Colors.black : Colors.grey,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_home),
-                      tooltip: 'Create House',
-                      onPressed: () => _showCreateHouseDialog(context, family.id),
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _showJoinButtons = !_showJoinButtons;
+                        });
+                      },
+                      icon: Icon(_showJoinButtons ? Icons.cancel : Icons.swap_horiz),
+                      label: Text(_showJoinButtons ? 'Cancel' : 'Change House'),
                     ),
                   ],
                 ),
-                initiallyExpanded: true,
-                children: hasHouses
-                    ? family.houses
-                    .map((house) => _buildHouseTile(
-                    context, family.id, house, userId!))
-                    .toList()
-                    : [
-                  const ListTile(
-                    title: Text(
-                      'No houses found in this family group.',
-                      style: TextStyle(color: Colors.grey),
+              ),
+            ],
+            Expanded(
+              child: ListView(
+                children: familyViewModel.familyGroups.map((family) {
+                  final hasHouses = family.houses.isNotEmpty;
+
+                  return ExpansionTile(
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          family.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: hasHouses ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add_home),
+                          tooltip: 'Create House',
+                          onPressed: () => _showCreateHouseDialog(context, family.id),
+                        ),
+                      ],
                     ),
-                  )
-                ],
-              );
-            }).toList(),
-          );
-        },
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ElevatedButton(
-          onPressed: () {
-            setState(() {
-              _showJoinButtons = !_showJoinButtons;
-            });
-          },
-          child: Text(_showJoinButtons ? 'Cancel' : 'Change House'),
-        ),
-      ),
+                    initiallyExpanded: true,
+                    children: hasHouses
+                        ? family.houses
+                        .map((house) => _buildHouseTile(
+                        context, family.id, house, userId!))
+                        .toList()
+                        : [
+                      const ListTile(
+                        title: Text(
+                          'No houses found in this family group.',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      )
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+            if (widget.useInternalScaffold)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _showJoinButtons = !_showJoinButtons;
+                    });
+                  },
+                  child: Text(_showJoinButtons ? 'Cancel' : 'Change House'),
+                ),
+              ),
+          ],
+        );
+      },
     );
+
+    if (widget.useInternalScaffold) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text("Family List"),
+        ),
+        body: content,
+      );
+    }
+
+    return content;
   }
 
   Future<void> _showCreateHouseDialog(BuildContext context, String familyGroupId) async {
@@ -211,7 +257,6 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
                           familyGroupId, house.id, userId);
                       
                       if (context.mounted) {
-                        // Hide the join buttons after successful change
                         setState(() {
                           _showJoinButtons = false;
                         });
@@ -239,36 +284,49 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
               if (house.memberIds.isNotEmpty) const Icon(Icons.expand_more),
             ],
           ),
-          children: house.memberIds.isEmpty
-              ? [
-                  const ListTile(
-                    title: Text('No members found in this house.'),
-                  ),
-                ]
-              : house.memberIds.map((memberId) => FutureBuilder(
-                    future: familyViewModel.getUserProfile(memberId),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData && snapshot.data != null) {
-                        final member = snapshot.data!;
-                        return ListTile(
-                          title: Text(member.displayName),
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => GiftListScreen(
-                                  userId: member.uid,
-                                  isCurrentUser: member.uid == userId,
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      }
-                      return const ListTile(
-                        title: Text('Loading member...'),
-                      );
-                    },
-                  )).toList(),
+          children: [
+            if (house.memberIds.isEmpty)
+              const ListTile(
+                title: Text('No members found in this house.'),
+              )
+            else
+              FutureBuilder<List<dynamic>>(
+                future: Future.wait(
+                  house.memberIds.map((memberId) => 
+                    familyViewModel.getUserProfile(memberId)
+                  )
+                ),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+                  
+                  return Column(
+                    children: snapshot.data!
+                        .where((member) => member != null)
+                        .map((member) => ListTile(
+                              title: Text(member.displayName),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => GiftListScreen(
+                                      userId: member.uid,
+                                      isCurrentUser: member.uid == userId,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ))
+                        .toList(),
+                  );
+                },
+              ),
+          ],
         );
       },
     );

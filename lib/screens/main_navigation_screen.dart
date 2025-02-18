@@ -59,9 +59,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('MainNavigationScreen: Building with $_selectedIndex selected');
     final userProvider = Provider.of<UserProvider>(context);
     final userId = userProvider.userId;
+    final isLargeScreen = MediaQuery.of(context).size.width > 900;
 
     // Check if user has no family group
     if (userProvider.familyGroupId == null) {
@@ -85,6 +85,86 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       );
     }
 
+    // For larger screens, show side-by-side layout
+    if (isLargeScreen) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('WikiLeet'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: _signOut,
+            ),
+          ],
+        ),
+        body: Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: Card(
+                  margin: const EdgeInsets.only(right: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16.0),
+                        child: const Text(
+                          'My Wish List',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      Expanded(
+                        child: GiftListScreen(
+                          userId: userId!, 
+                          isCurrentUser: true,
+                          useInternalScaffold: false,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Card(
+                  margin: const EdgeInsets.only(left: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16.0),
+                        child: const Text(
+                          'Family Members',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      const Expanded(
+                        child: FamilyListScreen(
+                          useInternalScaffold: false,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // For mobile screens, use bottom navigation
     return Scaffold(
       appBar: AppBar(
         title: const Text('WikiLeet'),

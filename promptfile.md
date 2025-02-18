@@ -226,21 +226,102 @@ I'm building a family gift list app using Flutter and Firestore (Firebase). The 
 
 # WikiLeet Development Progress
 
+## Business Rules and Application Constraints
+1. User Organization
+   - Users belong to exactly one Family Group at a time
+   - Within a Family Group, users can be part of one House (team/subgroup)
+   - A user's visibility and permissions are determined by their Family Group membership
+   - Houses are used for further organization within a Family Group (like teams)
+   - House membership does not affect gift visibility - all members of a Family Group can see each other's gifts
+
+2. Gift List Rules
+   - Gift lists are visible to all members within the same Family Group
+   - When a gift is marked as purchased, it remains visible to the owner but shows as purchased
+   - Other users see purchased gifts as hidden/marked to prevent duplicate purchases
+   - Only the gift owner can edit or delete their gifts
+   - Gift purchasers can toggle the purchase status of gifts they've bought
+
+3. Security Rules
+   - Firebase security rules must enforce Family Group membership checks
+   - Users can only read/write gifts within their own Family Group
+   - House membership changes must be validated at the security rule level
+   - Global admins have additional permissions for managing Family Groups
+   - Document updates must validate all required fields
+   - Batch operations must maintain data consistency
+
+4. State Management and Real-time Updates
+   - All data changes must be reflected in real-time across all connected clients
+   - User interface must handle loading and error states gracefully
+   - State updates should be atomic and maintain data consistency
+   - Providers should handle cleanup and subscription management
+   - Batch operations should show appropriate progress indicators
+   - Cache user data appropriately to minimize Firestore reads
+   - Handle offline state and data synchronization
+
+5. Promptfile Maintenance
+   - Update the promptfile with each significant feature or architecture change
+   - Document business rules and constraints as they are defined or discovered
+   - Track implementation progress and next steps
+   - Use the promptfile as a source of truth for application behavior
+   - Reference the promptfile when making architectural decisions
+
+6. Development Environment Setup
+   - Flutter and Dart SDK configuration requirements
+   - Firebase project setup and configuration
+   - Required environment variables and config files
+   - Local development server requirements
+   - Testing environment prerequisites
+
+7. Project Structure and Architecture
+   - Providers handle state management using Provider pattern
+   - Services layer manages Firebase/external service interactions
+   - Models represent core business objects
+   - Screens handle UI and user interactions
+   - ViewModels manage business logic and state
+   - Widgets are reusable UI components
+   - Real-time updates use StreamBuilder pattern
+
+8. Dependencies and Libraries
+   - Provider: State management and dependency injection
+   - Firebase Core/Auth/Firestore: Backend services and authentication
+   - URL Launcher: Handling external gift URLs
+   - Flutter StreamBuilder: Real-time data synchronization
+   - Material Design: UI component library
+   - Future required dependencies should be documented here
+
+9. Data Models and Relationships
+   - User Model:
+     - Contains auth info, profile data, and group affiliations
+     - References: familyGroupId, houseId
+     - Can be a global admin
+   - Family Group Model:
+     - Top-level organizational unit
+     - Contains: name, members list, house IDs
+     - References: member UIDs, house IDs
+   - House Model:
+     - Sub-group within a Family Group
+     - Contains: name, members list
+     - References: familyGroupId, member UIDs
+   - Gift Model:
+     - Contains: name, description, price, URL, category
+     - References: owner UID, familyGroupId, purchaser UID
+     - Status tracking: purchased, purchasedBy, createdAt
+
 ## Active Implementation
 Currently working on Family Group and House Structure:
-1. 🏃‍♂️ Family Group and House Refactoring:
-   - [ ] Fix house assignments when users select a house
-   - [ ] Add "Create House" button functionality
-   - [ ] Update layout for family list and gift list side-by-side view on larger screens
-   - [ ] Review and fix any mixed up family group vs house creation logic
+1. ✅ Family Group and House Refactoring:
+   - [x] Fix house assignments when users select a house
+   - [x] Add "Create House" button functionality
+   - [x] Update layout for family list and gift list side-by-side view on larger screens
+   - [x] Review and fix any mixed up family group vs house creation logic
 
 ## Architecture Notes
-- Family Groups: Represent the top-level workspace where users collaborate
-- Houses: Represent teams or sub-groups within a family group
+- Family Groups: Top-level organization unit where users collaborate and share gift lists
+- Houses: Sub-groups within a Family Group for team organization
 - Relationships:
   - Users belong to one Family Group
-  - Within a Family Group, users can be part of different Houses
-  - Houses are used for further organization within the Family Group
+  - Within a Family Group, users can be part of one House
+  - Houses are organizational units and don't affect gift visibility
 
 ## Completed Features
 - Basic project structure and Firebase integration
@@ -262,11 +343,11 @@ Currently working on Family Group and House Structure:
   - Gift URL integration
 
 ## Pending Features
-1. Family Group and House Structure
-   - [ ] Fix house assignment functionality
-   - [ ] Implement proper house creation flow
-   - [ ] Update UI for better organization display
-   - [ ] Add house management features
+1. UI/UX Improvements
+   - [ ] Add house management features (edit/delete)
+   - [ ] Implement drag-and-drop for gift reordering
+   - [ ] Add animations for state changes
+   - [ ] Improve mobile navigation
 2. Gift List Enhancement
    - [ ] Add search and filtering capabilities
    - [ ] Implement gift recommendations
@@ -285,7 +366,7 @@ Currently working on Family Group and House Structure:
    - [ ] Add accessibility features
 
 ## Implementation Order
-1. 🏃‍♂️ Current: Family Group and House Structure Refactoring
+1. 🏃‍♂️ Next: House Management Features
 2. Gift List Enhancements
 3. Security Rules & Validation
 4. UI/UX Improvements
