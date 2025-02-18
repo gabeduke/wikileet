@@ -9,7 +9,7 @@ class BatchAddGiftsScreen extends StatefulWidget {
   final String userId;
   final GiftService giftService;
 
-  BatchAddGiftsScreen({required this.userId, GiftService? giftService})
+  BatchAddGiftsScreen({super.key, required this.userId, GiftService? giftService})
       : giftService = giftService ?? GiftService();
 
   @override
@@ -65,10 +65,18 @@ class _BatchAddGiftsScreenState extends State<BatchAddGiftsScreen> {
 
   @override
   void dispose() {
-    _nameControllers.forEach((controller) => controller.dispose());
-    _descriptionControllers.forEach((controller) => controller.dispose());
-    _urlControllers.forEach((controller) => controller.dispose()); // New
-    _categoryControllers.forEach((controller) => controller.dispose()); // New
+    for (var controller in _nameControllers) {
+      controller.dispose();
+    }
+    for (var controller in _descriptionControllers) {
+      controller.dispose();
+    }
+    for (var controller in _urlControllers) {
+      controller.dispose();
+    } // New
+    for (var controller in _categoryControllers) {
+      controller.dispose();
+    } // New
     super.dispose();
   }
 
@@ -76,7 +84,7 @@ class _BatchAddGiftsScreenState extends State<BatchAddGiftsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add Multiple Gifts'),
+        title: const Text('Add Multiple Gifts'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -88,30 +96,30 @@ class _BatchAddGiftsScreenState extends State<BatchAddGiftsScreen> {
                 itemBuilder: (context, index) {
                   return Card(
                     elevation: 2,
-                    margin: EdgeInsets.symmetric(vertical: 8.0),
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
                         children: [
                           TextFormField(
                             controller: _nameControllers[index],
-                            decoration: InputDecoration(labelText: 'Gift Name'),
+                            decoration: const InputDecoration(labelText: 'Gift Name'),
                             validator: (value) =>
                                 value!.isEmpty ? 'Please enter a name' : null,
                           ),
                           TextFormField(
                             controller: _descriptionControllers[index],
                             decoration:
-                                InputDecoration(labelText: 'Description'),
+                                const InputDecoration(labelText: 'Description'),
                           ),
                           TextFormField(
                             controller: _urlControllers[index],
-                            decoration: InputDecoration(labelText: 'URL'),
+                            decoration: const InputDecoration(labelText: 'URL'),
                             keyboardType: TextInputType.url,
                           ),
                           TextFormField(
                             controller: _categoryControllers[index],
-                            decoration: InputDecoration(labelText: 'Category'),
+                            decoration: const InputDecoration(labelText: 'Category'),
                           ),
                         ],
                       ),
@@ -125,11 +133,11 @@ class _BatchAddGiftsScreenState extends State<BatchAddGiftsScreen> {
               children: [
                 ElevatedButton(
                   onPressed: _addGiftField,
-                  child: Text('Add Another Gift'),
+                  child: const Text('Add Another Gift'),
                 ),
                 ElevatedButton(
                   onPressed: _saveGifts,
-                  child: Text('Save All Gifts'),
+                  child: const Text('Save All Gifts'),
                 ),
               ],
             ),

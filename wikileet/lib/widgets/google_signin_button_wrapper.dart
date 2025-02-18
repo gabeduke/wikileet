@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class GoogleSignInButtonWrapper extends StatefulWidget {
   final Future<void> Function() onSignIn;
 
-  GoogleSignInButtonWrapper({required this.onSignIn});
+  const GoogleSignInButtonWrapper({super.key, required this.onSignIn});
 
   @override
   _GoogleSignInButtonWrapperState createState() => _GoogleSignInButtonWrapperState();
@@ -33,7 +33,7 @@ class _GoogleSignInButtonWrapperState extends State<GoogleSignInButtonWrapper> {
           }
         }
       },
-      child: _isProcessing ? CircularProgressIndicator() : Text("Sign in with Google"),
+      child: _isProcessing ? const CircularProgressIndicator() : const Text("Sign in with Google"),
     );
   }
 }

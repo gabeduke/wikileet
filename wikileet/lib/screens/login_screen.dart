@@ -4,7 +4,7 @@ import '../widgets/google_signin_button_wrapper.dart';
 class LoginScreen extends StatefulWidget {
   final Future<void> Function() onSignIn;
 
-  LoginScreen({required this.onSignIn});
+  const LoginScreen({super.key, required this.onSignIn});
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -16,7 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Login")),
+      appBar: AppBar(title: const Text("Login")),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

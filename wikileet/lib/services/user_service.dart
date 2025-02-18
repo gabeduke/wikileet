@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:wikileet/models/user.dart';
@@ -7,8 +6,7 @@ import 'package:wikileet/models/user.dart';
 class UserService {
   final FirebaseFirestore _firestore;
   final auth.FirebaseAuth? _auth;
-  User? _cachedUser; // Cache the user to prevent duplicate calls
-  bool _isFetchingProfile = false; // Prevent concurrent fetches
+  User? _cachedUser;
   bool _isAddingUser = false;
 
   UserService({FirebaseFirestore? firestore, auth.FirebaseAuth? auth})
@@ -36,67 +34,71 @@ class UserService {
   /// Add a new user to Firestore if they do not already exist
   Future<void> addUserIfNotExist(auth.User firebaseUser) async {
     if (_isAddingUser) {
-      print(
-          "Skipping duplicate addUserIfNotExist call for UID: ${firebaseUser.uid}");
+      print("Skipping duplicate addUserIfNotExist call for UID: ${firebaseUser.uid}");
       return;
     }
-    _isAddingUser = true; // Lock the method
-
+    _isAddingUser = true;
+    
     try {
       final userDocRef = _firestore.collection('users').doc(firebaseUser.uid);
-
-      // Force a fresh read from Firestore
-      final userDoc = await userDocRef.get(GetOptions(source: Source.server));
-
+      final userDoc = await userDocRef.get(const GetOptions(source: Source.server));
+      
       if (!userDoc.exists) {
         final userData = {
           'uid': firebaseUser.uid,
-          'displayName': firebaseUser.displayName ??
-              firebaseUser.email?.split('@').first ??
+          'displayName': firebaseUser.displayName ?? 
+              firebaseUser.email?.split('@').first ?? 
               'Unknown',
           'email': firebaseUser.email ?? 'unknown@example.com',
-          'familyGroupId': "CsK6qPSugEVSH0wKVQo0", // Example default group
+          'familyGroupId': null,  // Initialize as null, user will join/create group later
           'houseId': null,
           'profilePicUrl': firebaseUser.photoURL,
+          'createdAt': FieldValue.serverTimestamp(),
         };
-
         await userDocRef.set(userData);
         print("New user added to Firestore: ${firebaseUser.email}");
       } else {
-        print("User already exists in Firestore: ${firebaseUser.email}");
+        // Update existing user's display name and photo if they've changed
+        final currentData = userDoc.data() as Map<String, dynamic>;
+        if (currentData['displayName'] != firebaseUser.displayName || 
+            currentData['profilePicUrl'] != firebaseUser.photoURL) {
+          await userDocRef.update({
+            'displayName': firebaseUser.displayName,
+            'profilePicUrl': firebaseUser.photoURL,
+            'lastUpdated': FieldValue.serverTimestamp(),
+          });
+        }
       }
     } catch (e) {
       print("Error adding user to Firestore: $e");
       rethrow;
     } finally {
-      _isAddingUser = false; // Unlock the method
+      _isAddingUser = false;
     }
   }
 
   /// Fetch a user profile by their user ID
   Future<User?> getUserProfile(String userId) async {
+    print('Fetching user profile for: $userId');
     if (_cachedUser != null && _cachedUser!.uid == userId) {
+      print('Returning cached user profile');
       return _cachedUser; // Return cached user if available
     }
 
-    if (_isFetchingProfile) {
-      return null; // Prevent concurrent fetches
-    }
-
-    _isFetchingProfile = true;
     try {
+      print('Getting user doc from Firestore');
       final userDoc = await _firestore.collection('users').doc(userId).get();
-
       if (userDoc.exists) {
+        print('User doc exists, creating User object');
         _cachedUser = User.fromJson(userDoc); // Cache the result
         return _cachedUser;
       }
+      print('No user document found for ID: $userId');
       return null;
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Failed to get user profile: $e');
+      print('Stack trace: $stackTrace');
       throw Exception('Failed to get user profile: $e');
-    } finally {
-      _isFetchingProfile = false;
     }
   }
 

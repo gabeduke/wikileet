@@ -10,6 +10,8 @@ import '../providers/user_provider.dart';
 import '../services/auth_service.dart';
 
 class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({super.key});
+
   @override
   _MainNavigationScreenState createState() => _MainNavigationScreenState();
 }
@@ -24,13 +26,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   void initState() {
     super.initState();
+    print('MainNavigationScreen initState called');
     _checkAdminStatus();
   }
 
   Future<void> _checkAdminStatus() async {
+    print('Checking admin status...');
     try {
       final userId = Provider.of<UserProvider>(context, listen: false).userId;
+      print('Got userId: $userId');
+      
       if (userId == null) {
+        print('No userId found, setting screens with non-admin status');
         setState(() {
           _isAdmin = false;
           _screens = _buildScreens();
@@ -38,15 +45,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         return;
       }
 
+      print('Checking admin authorization for userId: $userId');
       final isAdmin = await Provider.of<FamilyViewModel>(context, listen: false)
           .checkAdminAuthorization(userId);
+      print('Admin check result: $isAdmin');
 
       setState(() {
         _isAdmin = isAdmin;
         _screens = _buildScreens();
       });
-    } catch (e) {
+      print('Screens built, count: ${_screens.length}');
+    } catch (e, stackTrace) {
       print('Error checking admin status: $e');
+      print('Stack trace: $stackTrace');
       setState(() {
         _isAdmin = false;
         _screens = _buildScreens();
@@ -57,7 +68,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   List<Widget> _buildScreens() {
     return [
       FamilyListScreen(),
-      GiftListScreen(userId: FirebaseAuth.instance.currentUser?.uid ?? ''),
+      GiftListScreen(
+        userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+        isCurrentUser: true,
+      ),
       if (_isAdmin) AdminInterfaceScreen(),
     ];
   }
@@ -76,7 +90,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     if (_screens.isEmpty) {
-      return Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
 
     return LayoutBuilder(
@@ -97,6 +111,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 Expanded(
                   child: GiftListScreen(
                     userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                    isCurrentUser: true,
                   ),
                 ),
               ],
@@ -109,10 +124,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text('WikiLeet'),
+            title: const Text('WikiLeet'),
             actions: [
               IconButton(
-                icon: Icon(Icons.logout),
+                icon: const Icon(Icons.logout),
                 onPressed: _signOut,
               ),
             ],
@@ -128,16 +143,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               }
             },
             items: [
-              BottomNavigationBarItem(
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.group),
                 label: 'Family',
               ),
-              BottomNavigationBarItem(
+              const BottomNavigationBarItem(
                 icon: Icon(Icons.list),
                 label: 'My Gift List',
               ),
               if (_isAdmin)
-                BottomNavigationBarItem(
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.admin_panel_settings),
                   label: 'Admin',
                 ),

@@ -9,7 +9,7 @@ import 'main_navigation_screen.dart';
 class FamilySelectionScreen extends StatefulWidget {
   final String userId;
 
-  FamilySelectionScreen({required this.userId});
+  const FamilySelectionScreen({super.key, required this.userId});
 
   @override
   _FamilySelectionScreenState createState() => _FamilySelectionScreenState();
@@ -73,11 +73,11 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Select Your Family'),
+        title: const Text('Select Your Family'),
       ),
       body: Column(
         children: [
-          Text('Select Family Group'),
+          const Text('Select Family Group'),
           Expanded(
             child: ListView.builder(
               itemCount: _familyGroups.length,
@@ -93,7 +93,7 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
             ),
           ),
           if (_houses.isNotEmpty) ...[
-            Text('Select Your House'),
+            const Text('Select Your House'),
             Expanded(
               child: ListView.builder(
                 itemCount: _houses.length,
@@ -115,7 +115,7 @@ class _FamilySelectionScreenState extends State<FamilySelectionScreen> {
           ],
           ElevatedButton(
             onPressed: _joinFamilyGroup,
-            child: Text('Join'),
+            child: const Text('Join'),
           ),
         ],
       ),

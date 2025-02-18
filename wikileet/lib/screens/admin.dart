@@ -4,6 +4,8 @@ import '../models/family_group.dart';
 import '../viewmodels/family_viewmodel.dart';
 
 class AdminInterfaceScreen extends StatefulWidget {
+  const AdminInterfaceScreen({super.key});
+
   @override
   _AdminInterfaceScreenState createState() => _AdminInterfaceScreenState();
 }
@@ -23,17 +25,17 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Admin Interface")),
+      appBar: AppBar(title: const Text("Admin Interface")),
       body: Consumer<FamilyViewModel>(
         builder: (context, familyViewModel, child) {
           if (familyViewModel.isLoading) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
           if (familyViewModel.errorMessage != null) {
             return Center(child: Text(familyViewModel.errorMessage!));
           }
           if (familyViewModel.familyGroups.isEmpty) {
-            return Center(child: Text("No family groups found"));
+            return const Center(child: Text("No family groups found"));
           }
 
           return ListView.builder(
@@ -46,7 +48,7 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
                   children: [
                     Text(familyGroup.name),
                     IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
+                      icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () =>
                           _deleteFamilyGroup(context, familyGroup.id),
                     ),
@@ -59,7 +61,7 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
         onPressed: () => _showAddDialog(context, "Family Group", (name) {
           Provider.of<FamilyViewModel>(context, listen: false)
               .addFamilyGroup(name);
@@ -73,32 +75,32 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
       padding: const EdgeInsets.all(8.0),
       child: Column(
         children: [
-          Text("Houses", style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text("Houses", style: TextStyle(fontWeight: FontWeight.bold)),
           ...familyGroup.houses.map((house) {
             return ListTile(
               title: TextFormField(
                 initialValue: house.name,
-                decoration: InputDecoration(labelText: "House Name"),
+                decoration: const InputDecoration(labelText: "House Name"),
                 onFieldSubmitted: (newName) {
                   Provider.of<FamilyViewModel>(context, listen: false)
                       .updateHouse(familyGroup.id, house.id, newName);
                 },
               ),
               trailing: IconButton(
-                icon: Icon(Icons.delete, color: Colors.red),
+                icon: const Icon(Icons.delete, color: Colors.red),
                 onPressed: () {
                   Provider.of<FamilyViewModel>(context, listen: false)
                       .deleteHouse(familyGroup.id, house.id);
                 },
               ),
             );
-          }).toList(),
+          }),
           ElevatedButton(
             onPressed: () => _showAddDialog(context, "House", (name) {
               Provider.of<FamilyViewModel>(context, listen: false)
                   .addHouse(familyGroup.id, name);
             }),
-            child: Text("Add House"),
+            child: const Text("Add House"),
           ),
         ],
       ),
@@ -130,7 +132,7 @@ class _AdminInterfaceScreenState extends State<AdminInterfaceScreen> {
                 onAdd(controller.text);
               }
             },
-            child: Text("Add"),
+            child: const Text("Add"),
           ),
         ],
       ),

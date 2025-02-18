@@ -10,7 +10,7 @@ class AddEditGiftScreen extends StatefulWidget {
   final GiftService giftService;
   final Gift? gift;
 
-  AddEditGiftScreen({required this.userId, GiftService? giftService, this.gift})
+  AddEditGiftScreen({super.key, required this.userId, GiftService? giftService, this.gift})
       : giftService = giftService ?? GiftService();
 
   @override
@@ -93,24 +93,24 @@ class _AddEditGiftScreenState extends State<AddEditGiftScreen> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: 'Gift Name'),
+                decoration: const InputDecoration(labelText: 'Gift Name'),
                 validator: (value) =>
                     value!.isEmpty ? 'Please enter a name' : null,
               ),
               TextFormField(
                 controller: _descriptionController,
-                decoration: InputDecoration(labelText: 'Description'),
+                decoration: const InputDecoration(labelText: 'Description'),
               ),
               TextFormField(
                 controller: _urlController,
-                decoration: InputDecoration(labelText: 'URL'),
+                decoration: const InputDecoration(labelText: 'URL'),
                 keyboardType: TextInputType.url,
               ),
               TextFormField(
                 controller: _categoryController,
-                decoration: InputDecoration(labelText: 'Category'),
+                decoration: const InputDecoration(labelText: 'Category'),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveGift,
                 child: Text(widget.gift == null ? 'Add Gift' : 'Update Gift'),

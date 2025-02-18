@@ -1,89 +1,100 @@
-// gift_list_viewmodel.dart
-import 'dart:async';
-
-import 'package:flutter/material.dart';
-import 'package:wikileet/models/gift.dart';
-import 'package:wikileet/services/gift_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/gift.dart';
+import '../services/gift_service.dart';
 
 class GiftListViewModel extends ChangeNotifier {
   final GiftService giftService;
   final String giftListOwnerId;
   final String currentUserId;
-
+  
+  Stream<List<Gift>>? _giftsStream;
   List<Gift> _gifts = [];
-  bool isOwner = false;
+  Map<String, List<Gift>> _giftsByCategory = {};
+  bool _isLoading = false;
+  String? _error;
 
   GiftListViewModel({
     required this.giftService,
     required this.giftListOwnerId,
     required this.currentUserId,
   }) {
-    initialize();
+    _initGiftsStream();
   }
 
   List<Gift> get gifts => _gifts;
+  Map<String, List<Gift>> get giftsByCategory => _giftsByCategory;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  bool get isOwner => currentUserId == giftListOwnerId;
 
-  Map<String, List<Gift>> giftsByCategory = {};
+  void _initGiftsStream() {
+    _giftsStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(giftListOwnerId)
+        .collection('gifts')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Gift.fromFirestore(doc))
+            .toList());
 
-  StreamSubscription<List<Gift>>? _giftsSubscription;
+    _giftsStream?.listen(
+      (gifts) {
+        _gifts = gifts;
+        _updateGiftsByCategory();
+        notifyListeners();
+      },
+      onError: (error) {
+        _error = error.toString();
+        notifyListeners();
+      },
+    );
+  }
 
-  void initialize() {
-    isOwner = currentUserId == giftListOwnerId;
-
-    // Listen to the gifts stream
-    _giftsSubscription =
-        giftService.getGiftListStream(giftListOwnerId).listen((giftList) {
-      _gifts = giftList;
-
-      // Organize gifts by category
-      giftsByCategory = {};
-      for (var gift in _gifts) {
-        final category = gift.category ?? 'Uncategorized';
-        if (!giftsByCategory.containsKey(category)) {
-          giftsByCategory[category] = [];
-        }
-        giftsByCategory[category]!.add(gift);
+  void _updateGiftsByCategory() {
+    _giftsByCategory = {};
+    for (var gift in _gifts) {
+      final category = gift.category ?? 'Uncategorized';
+      if (!_giftsByCategory.containsKey(category)) {
+        _giftsByCategory[category] = [];
       }
-
-      notifyListeners();
-    });
+      _giftsByCategory[category]!.add(gift);
+    }
   }
 
   bool canTogglePurchasedStatus(Gift gift) {
-    // Users can toggle if they are the ones who marked it or if it's unpurchased
-    return !isOwner &&
-        (gift.purchasedBy == null || gift.purchasedBy == currentUserId);
+    if (isOwner) return false; // Owner can't mark their own gifts as purchased
+    return gift.purchasedBy == null || gift.purchasedBy == currentUserId;
   }
 
-  Future<void> togglePurchasedStatus(Gift gift) async {
-    final isPurchasedByCurrentUser = gift.purchasedBy == currentUserId;
+  Future<void> toggleGiftPurchased(Gift gift) async {
+    if (!canTogglePurchasedStatus(gift)) return;
 
-    await giftService.updateGift(giftListOwnerId, gift.id, {
-      'purchasedBy': isPurchasedByCurrentUser ? null : currentUserId,
-    });
-  }
+    try {
+      final updatedGift = gift.copyWith(
+        purchasedBy: gift.purchasedBy == null ? currentUserId : null,
+        purchased: !gift.purchased,
+      );
 
-  bool canMarkAsPurchased(Gift gift) {
-    return !isOwner && gift.purchasedBy == null;
-  }
-
-  Future<void> markAsPurchased(Gift gift) async {
-    if (canMarkAsPurchased(gift)) {
-      await giftService.updateGift(giftListOwnerId, gift.id, {
-        'purchasedBy': currentUserId,
-      });
+      await giftService.updateGift(
+        giftListOwnerId,
+        gift.id,
+        updatedGift.toFirestore(),
+      );
+    } catch (e) {
+      _error = 'Failed to update gift: $e';
+      notifyListeners();
     }
   }
 
   Future<void> deleteGift(Gift gift) async {
-    if (isOwner) {
-      await giftService.deleteGift(giftListOwnerId, gift.id);
-    }
-  }
+    if (!isOwner) return;
 
-  @override
-  void dispose() {
-    _giftsSubscription?.cancel(); // Cancel the subscription when disposed
-    super.dispose();
+    try {
+      await giftService.deleteGift(giftListOwnerId, gift.id);
+    } catch (e) {
+      _error = 'Failed to delete gift: $e';
+      notifyListeners();
+    }
   }
 }

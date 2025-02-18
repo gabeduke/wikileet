@@ -6,6 +6,8 @@ import '../models/house.dart';
 import 'gift_list_screen.dart';
 
 class FamilyListScreen extends StatefulWidget {
+  const FamilyListScreen({super.key});
+
   @override
   _FamilyListScreenState createState() => _FamilyListScreenState();
 }
@@ -27,12 +29,12 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Family List"),
+        title: const Text("Family List"),
       ),
       body: Consumer<FamilyViewModel>(
         builder: (context, familyViewModel, child) {
           if (familyViewModel.isLoading) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (familyViewModel.errorMessage != null) {
@@ -40,7 +42,7 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
           }
 
           if (familyViewModel.familyGroups.isEmpty) {
-            return Center(child: Text('No family groups found.'));
+            return const Center(child: Text('No family groups found.'));
           }
 
           return ListView(
@@ -67,7 +69,7 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
                     context, family.id, house, userId!))
                     .toList()
                     : [
-                  ListTile(
+                  const ListTile(
                     title: Text(
                       'No houses found in this family group.',
                       style: TextStyle(color: Colors.grey),
@@ -98,7 +100,7 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
     return Consumer<FamilyViewModel>(
       builder: (context, familyViewModel, child) {
         return ExpansionTile(
-          title: Text(house.name, style: TextStyle(color: Colors.blueAccent)),
+          title: Text(house.name, style: const TextStyle(color: Colors.blueAccent)),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -115,9 +117,9 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
                       );
                     }
                   },
-                  child: Text('Join House'),
+                  child: const Text('Join House'),
                 ),
-              if (house.members.isNotEmpty) Icon(Icons.expand_more),
+              if (house.members.isNotEmpty) const Icon(Icons.expand_more),
             ],
           ),
           children: house.members.isNotEmpty
@@ -129,7 +131,10 @@ class _FamilyListScreenState extends State<FamilyListScreen> {
               if (selectedUserId != null) {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => GiftListScreen(userId: selectedUserId),
+                    builder: (context) => GiftListScreen(
+                      userId: selectedUserId,
+                      isCurrentUser: selectedUserId == userId,
+                    ),
                   ),
                 );
               } else {
