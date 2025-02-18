@@ -20,7 +20,7 @@ class House {
     return House(
       id: doc.id,
       name: data['name'] ?? '',
-      memberIds: List<String>.from(data['members'] ?? []),
+      memberIds: List<String>.from(data['members'] ?? data['memberIds'] ?? []),
     );
   }
 
