@@ -1,5 +1,19 @@
 {
   "projects": {
     "default": "wikileet"
-  }
+  },
+  "targets": {
+    "wikileet": {
+      "hosting": {
+        "production": [
+          "wikileet"
+        ],
+        "preview": [
+          "wikileet-dev"
+        ]
+      }
+    }
+  },
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
 }
