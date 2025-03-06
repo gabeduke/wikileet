@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/gift.dart';
+import '../services/gift_service.dart';
 
 class GiftProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -8,7 +9,12 @@ class GiftProvider with ChangeNotifier {
   
   Stream<List<Gift>>? get giftsForUser => _giftsForUser;
 
-  void initializeGiftStreamForUser(String userId) {
+  Future<void> initializeGiftStreamForUser(String userId) async {
+    // First migrate any old category data
+    final giftService = GiftService();
+    await giftService.migrateGiftCategories(userId);
+
+    // Then set up the stream
     _giftsForUser = _firestore
         .collection('gifts')
         .where('userId', isEqualTo: userId)

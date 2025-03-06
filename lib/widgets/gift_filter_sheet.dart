@@ -6,6 +6,9 @@ class GiftFilterSheet extends StatelessWidget {
   final Function(GiftSortOption) onSortOptionChanged;
   final String? selectedCategory;
   final Function(String?) onCategoryChanged;
+  final List<String> availableCategories;  // New parameter
+  final bool groupByCategory;  // New parameter
+  final Function(bool) onGroupingChanged;  // New parameter
 
   const GiftFilterSheet({
     super.key,
@@ -13,6 +16,9 @@ class GiftFilterSheet extends StatelessWidget {
     required this.onSortOptionChanged,
     this.selectedCategory,
     required this.onCategoryChanged,
+    this.availableCategories = const [],  // Default to empty list
+    required this.groupByCategory,
+    required this.onGroupingChanged,
   });
 
   @override
@@ -52,8 +58,29 @@ class GiftFilterSheet extends StatelessWidget {
             }).toList(),
           ),
           const SizedBox(height: 16),
+          Row(
+            children: [
+              Text(
+                'View Options',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () => onGroupingChanged(!groupByCategory),
+                icon: Icon(
+                  groupByCategory ? Icons.grid_view : Icons.list,
+                  size: 20,
+                ),
+                label: Text(
+                  groupByCategory ? 'Show as List' : 'Group by Category',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           Text(
-            'Filter by Category',
+            'Filter by Tag',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
@@ -78,7 +105,24 @@ class GiftFilterSheet extends StatelessWidget {
                   ),
                 ),
               ),
-              // You might want to add more category options here
+              ...availableCategories.map((category) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: FilterChip(
+                  label: Text(category),
+                  selected: selectedCategory == category,
+                  onSelected: (selected) {
+                    if (selected) {
+                      onCategoryChanged(category);
+                    }
+                  },
+                  backgroundColor: Colors.blue.shade50,
+                  selectedColor: Colors.blue.shade100,
+                  checkmarkColor: Colors.blue.shade700,
+                  labelStyle: TextStyle(
+                    color: selectedCategory == category ? Colors.blue.shade700 : Colors.blue.shade900,
+                  ),
+                ),
+              )),
             ],
           ),
         ],

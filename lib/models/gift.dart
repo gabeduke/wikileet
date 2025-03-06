@@ -6,10 +6,10 @@ class Gift {
   final String id;
   final String name;
   final String description;
-  final String familyGroupId;  // Added required field
+  final String familyGroupId;
   final double? price;
   final String? url;
-  final String? category;
+  final List<String> categories;  // Changed from String? to List<String>
   final String? reservedBy;
   final String? purchasedBy;
   final bool visibility;
@@ -20,10 +20,10 @@ class Gift {
     required this.id,
     required this.name,
     required this.description,
-    required this.familyGroupId,  // Added to constructor
+    required this.familyGroupId,
     this.price,
     this.url,
-    this.category,
+    this.categories = const [],  // Default to empty list
     this.reservedBy,
     this.purchasedBy,
     required this.visibility,
@@ -35,10 +35,10 @@ class Gift {
     String? id,
     String? name,
     String? description,
-    String? familyGroupId,  // Added to copyWith
+    String? familyGroupId,
     double? price,
     String? url,
-    String? category,
+    List<String>? categories,
     String? reservedBy,
     String? purchasedBy,
     bool? visibility,
@@ -49,10 +49,10 @@ class Gift {
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
-      familyGroupId: familyGroupId ?? this.familyGroupId,  // Added to copyWith
+      familyGroupId: familyGroupId ?? this.familyGroupId,
       price: price ?? this.price,
       url: url ?? this.url,
-      category: category ?? this.category,
+      categories: categories ?? this.categories,
       reservedBy: reservedBy ?? this.reservedBy,
       purchasedBy: purchasedBy ?? this.purchasedBy,
       visibility: visibility ?? this.visibility,
@@ -67,10 +67,10 @@ class Gift {
       id: doc.id,
       name: data['name'] ?? '',
       description: data['description'] ?? '',
-      familyGroupId: data['familyGroupId'] ?? '',  // Added familyGroupId
+      familyGroupId: data['familyGroupId'] ?? '',
       price: data['price'] != null ? (data['price'] as num).toDouble() : null,
       url: data['url'] as String?,
-      category: data['category'] as String?,
+      categories: (data['categories'] as List<dynamic>?)?.cast<String>() ?? [],
       reservedBy: data['reservedBy'] as String?,
       purchasedBy: data['purchasedBy'] as String?,
       visibility: data['visibility'] ?? true,
@@ -83,10 +83,10 @@ class Gift {
     return {
       'name': name,
       'description': description,
-      'familyGroupId': familyGroupId,  // Added to toFirestore
+      'familyGroupId': familyGroupId,
       'price': price,
       'url': url,
-      'category': category,
+      'categories': categories,
       'reservedBy': reservedBy,
       'purchasedBy': purchasedBy,
       'visibility': visibility,

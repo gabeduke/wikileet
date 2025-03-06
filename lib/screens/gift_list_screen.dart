@@ -32,6 +32,7 @@ class _GiftListScreenState extends State<GiftListScreen> {
   GiftSortOption _sortOption = GiftSortOption.dateAdded;
   final TextEditingController _searchController = TextEditingController();
   bool _isInitialized = false;
+  bool _groupByCategory = true; // New state variable
 
   @override
   void initState() {
@@ -57,7 +58,8 @@ class _GiftListScreenState extends State<GiftListScreen> {
     return gifts
         .where((gift) =>
             _selectedCategory == null ||
-            gift.category?.toLowerCase() == _selectedCategory?.toLowerCase())
+            gift.categories.any((category) => 
+              category.toLowerCase() == _selectedCategory?.toLowerCase()))
         .where((gift) =>
             _searchQuery.isEmpty ||
             gift.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -77,21 +79,122 @@ class _GiftListScreenState extends State<GiftListScreen> {
       });
   }
 
+  Map<String, List<Gift>> _groupGiftsByCategory(List<Gift> gifts) {
+    final groupedGifts = <String, List<Gift>>{};
+    for (var gift in gifts) {
+      final category = gift.categories.isNotEmpty ? gift.categories[0] : 'Uncategorized';
+      groupedGifts.putIfAbsent(category, () => []).add(gift);
+    }
+    return groupedGifts;
+  }
+
+  List<String> _getUniqueCategories(List<Gift> gifts) {
+    final categories = gifts
+        .expand((gift) => gift.categories)
+        .toSet()
+        .toList()
+      ..sort();
+    return categories;
+  }
+
+  Widget _buildGiftList(List<Gift> gifts) {
+    final filteredGifts = _filterAndSortGifts(gifts);
+
+    if (filteredGifts.isEmpty) {
+      return const Center(
+        child: Text('No gifts match your search'),
+      );
+    }
+
+    if (!_groupByCategory) {
+      return ListView.builder(
+        itemCount: filteredGifts.length,
+        itemBuilder: (context, index) {
+          final gift = filteredGifts[index];
+          return _buildGiftCard(context, gift);
+        },
+      );
+    }
+
+    // Grouped view
+    final groupedGifts = _groupGiftsByCategory(filteredGifts);
+    final sortedCategories = groupedGifts.keys.toList()..sort();
+
+    return ListView.builder(
+      itemCount: sortedCategories.length,
+      itemBuilder: (context, index) {
+        final category = sortedCategories[index];
+        final categoryGifts = groupedGifts[category]!;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                children: [
+                  Text(
+                    category,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${categoryGifts.length}',
+                      style: TextStyle(
+                        color: Colors.blue.shade700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ...categoryGifts.map((gift) => _buildGiftCard(context, gift)),
+          ],
+        );
+      },
+    );
+  }
+
   void _showFilterSheet() {
+    final giftProvider = context.read<GiftProvider>();
+    
     showModalBottomSheet(
       context: context,
-      builder: (context) => GiftFilterSheet(
-        selectedCategory: _selectedCategory,
-        sortOption: _sortOption,
-        onCategoryChanged: (category) {
-          setState(() {
-            _selectedCategory = category;
-          });
-        },
-        onSortOptionChanged: (option) {
-          setState(() {
-            _sortOption = option;
-          });
+      builder: (context) => StreamBuilder<List<Gift>>(
+        stream: giftProvider.giftsForUser,
+        builder: (context, snapshot) {
+          final gifts = snapshot.data ?? [];
+          return GiftFilterSheet(
+            selectedCategory: _selectedCategory,
+            sortOption: _sortOption,
+            onCategoryChanged: (category) {
+              setState(() {
+                _selectedCategory = category;
+              });
+            },
+            onSortOptionChanged: (option) {
+              setState(() {
+                _sortOption = option;
+              });
+            },
+            groupByCategory: _groupByCategory,
+            onGroupingChanged: (value) {
+              setState(() {
+                _groupByCategory = value;
+              });
+            },
+            availableCategories: _getUniqueCategories(gifts),
+          );
         },
       ),
     );
@@ -125,6 +228,15 @@ class _GiftListScreenState extends State<GiftListScreen> {
                               });
                             },
                           ),
+                        ),
+                        IconButton(
+                          icon: Icon(_groupByCategory ? Icons.list : Icons.grid_view),
+                          onPressed: () {
+                            setState(() {
+                              _groupByCategory = !_groupByCategory;
+                            });
+                          },
+                          tooltip: _groupByCategory ? 'Show as list' : 'Group by category',
                         ),
                         IconButton(
                           icon: const Icon(Icons.filter_list),
@@ -165,21 +277,7 @@ class _GiftListScreenState extends State<GiftListScreen> {
                         );
                       }
 
-                      final filteredGifts = _filterAndSortGifts(snapshot.data!);
-
-                      if (filteredGifts.isEmpty) {
-                        return const Center(
-                          child: Text('No gifts match your search'),
-                        );
-                      }
-
-                      return ListView.builder(
-                        itemCount: filteredGifts.length,
-                        itemBuilder: (context, index) {
-                          final gift = filteredGifts[index];
-                          return _buildGiftCard(context, gift);
-                        },
-                      );
+                      return _buildGiftList(snapshot.data!);
                     },
                   ),
                 ),
@@ -195,6 +293,15 @@ class _GiftListScreenState extends State<GiftListScreen> {
                         : '${user.displayName}\'s Wish List',
                   ),
                   actions: [
+                    IconButton(
+                      icon: Icon(_groupByCategory ? Icons.list : Icons.grid_view),
+                      onPressed: () {
+                        setState(() {
+                          _groupByCategory = !_groupByCategory;
+                        });
+                      },
+                      tooltip: _groupByCategory ? 'Show as list' : 'Group by category',
+                    ),
                     IconButton(
                       icon: const Icon(Icons.filter_list),
                       onPressed: _showFilterSheet,
@@ -299,9 +406,11 @@ class _GiftListScreenState extends State<GiftListScreen> {
               ),
               const SizedBox(height: 8),
             ],
-            // Price and category row
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            // Price and categories row
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 if (gift.price != null)
                   Container(
@@ -318,22 +427,19 @@ class _GiftListScreenState extends State<GiftListScreen> {
                       ),
                     ),
                   ),
-                if (gift.price != null && gift.category != null)
-                  const SizedBox(width: 8),
-                if (gift.category != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      gift.category!,
-                      style: TextStyle(
-                        color: Colors.blue.shade700,
-                      ),
+                ...gift.categories.map((category) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    category,
+                    style: TextStyle(
+                      color: Colors.blue.shade700,
                     ),
                   ),
+                )),
               ],
             ),
           ],

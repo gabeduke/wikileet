@@ -112,4 +112,48 @@ class GiftService {
         .doc(giftId)
         .delete();
   }
+
+  /// Migrate a single category string to a list of categories.
+  /// This ensures backward compatibility with existing data.
+  List<String> _migrateCategoryToList(dynamic categoryData) {
+    if (categoryData == null) {
+      return [];
+    }
+    if (categoryData is String) {
+      return [categoryData]; // Convert single category to list
+    }
+    if (categoryData is List) {
+      return categoryData.map((e) => e.toString()).toList();
+    }
+    return [];
+  }
+
+  /// Updates the gift data model for all gifts in a user's list.
+  /// This should be called when initializing the app to ensure data consistency.
+  Future<void> migrateGiftCategories(String userId) async {
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('gifts')
+        .get();
+
+    final batch = _firestore.batch();
+    var needsMigration = false;
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      if (data['category'] != null && data['categories'] == null) {
+        // Convert old single category to new categories list
+        batch.update(doc.reference, {
+          'categories': [data['category']],
+          'category': FieldValue.delete(), // Remove old field
+        });
+        needsMigration = true;
+      }
+    }
+
+    if (needsMigration) {
+      await batch.commit();
+    }
+  }
 }

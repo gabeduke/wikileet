@@ -25,6 +25,7 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
   late final TextEditingController _priceController;
   late final TextEditingController _urlController;
   late final TextEditingController _categoryController;
+  List<String> _categories = [];
   bool _visibility = true;
 
   @override
@@ -36,18 +37,25 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
       text: widget.gift?.price?.toStringAsFixed(2),
     );
     _urlController = TextEditingController(text: widget.gift?.url);
-    _categoryController = TextEditingController(text: widget.gift?.category);
+    _categoryController = TextEditingController();
+    _categories = widget.gift?.categories ?? [];
     _visibility = widget.gift?.visibility ?? true;
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _descriptionController.dispose();
-    _priceController.dispose();
-    _urlController.dispose();
-    _categoryController.dispose();
-    super.dispose();
+  void _addCategory() {
+    final category = _categoryController.text.trim();
+    if (category.isNotEmpty && !_categories.contains(category)) {
+      setState(() {
+        _categories.add(category);
+        _categoryController.clear();
+      });
+    }
+  }
+
+  void _removeCategory(String category) {
+    setState(() {
+      _categories.remove(category);
+    });
   }
 
   @override
@@ -59,6 +67,7 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
                 controller: _nameController,
@@ -111,12 +120,34 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
                 keyboardType: TextInputType.url,
               ),
               const SizedBox(height: 8),
-              TextFormField(
-                controller: _categoryController,
-                decoration: const InputDecoration(
-                  labelText: 'Category (optional)',
-                  hintText: 'Enter category',
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _categoryController,
+                      decoration: const InputDecoration(
+                        labelText: 'Categories',
+                        hintText: 'Add a category',
+                      ),
+                      onFieldSubmitted: (_) => _addCategory(),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: _addCategory,
+                    tooltip: 'Add category',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: _categories.map((category) => Chip(
+                  label: Text(category),
+                  deleteIcon: const Icon(Icons.close, size: 18),
+                  onDeleted: () => _removeCategory(category),
+                )).toList(),
               ),
               const SizedBox(height: 16),
               Row(
@@ -154,9 +185,7 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
                 'url': _urlController.text.isNotEmpty
                     ? _urlController.text.trim()
                     : null,
-                'category': _categoryController.text.isNotEmpty
-                    ? _categoryController.text.trim()
-                    : null,
+                'categories': _categories,
                 'visibility': _visibility,
                 'userId': widget.userId,
                 'familyGroupId': widget.familyGroupId,
@@ -169,5 +198,15 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    _urlController.dispose();
+    _categoryController.dispose();
+    super.dispose();
   }
 }
