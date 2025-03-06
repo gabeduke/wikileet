@@ -7,15 +7,22 @@ on:
         required: false
         type: string
         default: '3.24.4'
+    outputs:
+      result:
+        description: "The result of the Flutter setup"
+        value: ${{ jobs.setup.outputs.result }}
 
 jobs:
   setup:
     runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.flutter-setup.outputs.result }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         
       - name: Set up Flutter
+        id: flutter-setup
         uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ inputs.flutter-version }}
