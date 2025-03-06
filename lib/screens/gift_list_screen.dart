@@ -260,9 +260,9 @@ class _GiftListScreenState extends State<GiftListScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             if (gift.category != null)
-              Text(
-                'Category: ${gift.category}',
-                style: const TextStyle(fontStyle: FontStyle.italic),
+              Chip(
+                label: Text(gift.category!),
+                backgroundColor: Colors.blue.shade100,
               ),
           ],
         ),
