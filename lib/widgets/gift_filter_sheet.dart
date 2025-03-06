@@ -6,9 +6,12 @@ class GiftFilterSheet extends StatelessWidget {
   final Function(GiftSortOption) onSortOptionChanged;
   final String? selectedCategory;
   final Function(String?) onCategoryChanged;
-  final List<String> availableCategories;  // New parameter
-  final bool groupByCategory;  // New parameter
-  final Function(bool) onGroupingChanged;  // New parameter
+  final List<String> availableCategories;
+  final bool groupByCategory;
+  final Function(bool) onGroupingChanged;
+  final bool isCurrentUser;
+  final Function()? onManageCategories;
+  final List<String> pinnedCategories;
 
   const GiftFilterSheet({
     super.key,
@@ -16,13 +19,25 @@ class GiftFilterSheet extends StatelessWidget {
     required this.onSortOptionChanged,
     this.selectedCategory,
     required this.onCategoryChanged,
-    this.availableCategories = const [],  // Default to empty list
+    this.availableCategories = const [],
     required this.groupByCategory,
     required this.onGroupingChanged,
+    this.isCurrentUser = false,
+    this.onManageCategories,
+    this.pinnedCategories = const [],
   });
+
+  List<String> _getOrderedCategories() {
+    final ordered = <String>[];
+    ordered.addAll(pinnedCategories);
+    ordered.addAll(availableCategories.where((c) => !pinnedCategories.contains(c)));
+    return ordered;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final orderedCategories = _getOrderedCategories();
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -79,9 +94,20 @@ class GiftFilterSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            'Filter by Tag',
-            style: Theme.of(context).textTheme.titleMedium,
+          Row(
+            children: [
+              Text(
+                'Filter by Category',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const Spacer(),
+              if (isCurrentUser && onManageCategories != null)
+                TextButton.icon(
+                  onPressed: onManageCategories,
+                  icon: const Icon(Icons.settings, size: 20),
+                  label: const Text('Manage'),
+                ),
+            ],
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -105,7 +131,7 @@ class GiftFilterSheet extends StatelessWidget {
                   ),
                 ),
               ),
-              ...availableCategories.map((category) => Container(
+              ...orderedCategories.map((category) => Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: FilterChip(
                   label: Text(category),
@@ -115,6 +141,8 @@ class GiftFilterSheet extends StatelessWidget {
                       onCategoryChanged(category);
                     }
                   },
+                  avatar: pinnedCategories.contains(category) ? 
+                    Icon(Icons.push_pin, size: 16, color: Colors.blue.shade700) : null,
                   backgroundColor: Colors.blue.shade50,
                   selectedColor: Colors.blue.shade100,
                   checkmarkColor: Colors.blue.shade700,

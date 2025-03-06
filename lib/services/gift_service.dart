@@ -156,4 +156,43 @@ class GiftService {
       await batch.commit();
     }
   }
+
+  Future<List<String>> getAllCategories(String userId) async {
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('gifts')
+        .get();
+
+    final categories = snapshot.docs
+        .expand((doc) {
+          final data = doc.data();
+          final cats = (data['categories'] as List<dynamic>?)?.cast<String>() ?? [];
+          return cats;
+        })
+        .toSet()
+        .toList()
+      ..sort();
+
+    return categories;  // Now just return the List<String> directly
+  }
+
+  Future<List<String>> getPinnedCategories(String userId) async {
+    final doc = await _firestore
+        .collection('users')
+        .doc(userId)
+        .get();
+    
+    final data = doc.data();
+    return (data?['pinnedCategories'] as List<dynamic>?)?.cast<String>() ?? [];
+  }
+
+  Future<void> updatePinnedCategories(String userId, List<String> categories) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .set({
+          'pinnedCategories': categories,
+        }, SetOptions(merge: true));
+  }
 }

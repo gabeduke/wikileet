@@ -6,9 +6,12 @@ import '../models/user.dart';
 import '../models/gift_sort_option.dart';
 import '../providers/gift_provider.dart';
 import '../providers/user_provider.dart';
+import '../services/gift_service.dart';
 import '../widgets/gift_form_dialog.dart';
 import '../widgets/gift_search_bar.dart';
 import '../widgets/gift_filter_sheet.dart';
+import '../widgets/manage_categories_dialog.dart';
+import '../screens/batch_add_gifts_screen.dart';  // Add this
 
 class GiftListScreen extends StatefulWidget {
   final String userId;
@@ -33,6 +36,7 @@ class _GiftListScreenState extends State<GiftListScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isInitialized = false;
   bool _groupByCategory = true; // New state variable
+  List<String> _pinnedCategories = [];
 
   @override
   void initState() {
@@ -42,8 +46,21 @@ class _GiftListScreenState extends State<GiftListScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           context.read<GiftProvider>().initializeGiftStreamForUser(widget.userId);
+          _loadPinnedCategories();
           _isInitialized = true;
         }
+      });
+    }
+  }
+
+  Future<void> _loadPinnedCategories() async {
+    if (!widget.isCurrentUser) return;
+    
+    final giftService = GiftService();
+    final pinnedCategories = await giftService.getPinnedCategories(widget.userId);
+    if (mounted) {
+      setState(() {
+        _pinnedCategories = pinnedCategories;
       });
     }
   }
@@ -165,6 +182,22 @@ class _GiftListScreenState extends State<GiftListScreen> {
     );
   }
 
+  Future<void> _showManageCategoriesDialog(List<String> allCategories) async {
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => ManageCategoriesDialog(
+        userId: widget.userId,
+        allCategories: allCategories,
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _pinnedCategories = result;
+      });
+    }
+  }
+
   void _showFilterSheet() {
     final giftProvider = context.read<GiftProvider>();
     
@@ -174,6 +207,8 @@ class _GiftListScreenState extends State<GiftListScreen> {
         stream: giftProvider.giftsForUser,
         builder: (context, snapshot) {
           final gifts = snapshot.data ?? [];
+          final allCategories = _getUniqueCategories(gifts);
+          
           return GiftFilterSheet(
             selectedCategory: _selectedCategory,
             sortOption: _sortOption,
@@ -193,7 +228,12 @@ class _GiftListScreenState extends State<GiftListScreen> {
                 _groupByCategory = value;
               });
             },
-            availableCategories: _getUniqueCategories(gifts),
+            availableCategories: allCategories,
+            isCurrentUser: widget.isCurrentUser,
+            pinnedCategories: _pinnedCategories,
+            onManageCategories: widget.isCurrentUser 
+              ? () => _showManageCategoriesDialog(allCategories)
+              : null,
           );
         },
       ),
@@ -246,7 +286,7 @@ class _GiftListScreenState extends State<GiftListScreen> {
                         if (widget.isCurrentUser)
                           IconButton(
                             icon: const Icon(Icons.add),
-                            onPressed: () => _showAddGiftDialog(context),
+                            onPressed: () => _showAddOptions(context),
                             tooltip: 'Add gift',
                           ),
                       ],
@@ -269,7 +309,7 @@ class _GiftListScreenState extends State<GiftListScreen> {
                               const Text('No gifts found'),
                               if (widget.isCurrentUser)
                                 ElevatedButton(
-                                  onPressed: () => _showAddGiftDialog(context),
+                                  onPressed: () => _showAddOptions(context),
                                   child: const Text('Add Your First Gift'),
                                 ),
                             ],
@@ -310,7 +350,7 @@ class _GiftListScreenState extends State<GiftListScreen> {
                     if (widget.isCurrentUser)
                       IconButton(
                         icon: const Icon(Icons.add),
-                        onPressed: () => _showAddGiftDialog(context),
+                        onPressed: () => _showAddOptions(context),  // Updated
                         tooltip: 'Add gift',
                       ),
                   ],
@@ -329,7 +369,7 @@ class _GiftListScreenState extends State<GiftListScreen> {
                 body: content,
                 floatingActionButton: widget.isCurrentUser
                     ? FloatingActionButton(
-                        onPressed: () => _showAddGiftDialog(context),
+                        onPressed: () => _showAddOptions(context),  // Updated
                         child: const Icon(Icons.add),
                       )
                     : null,
@@ -551,5 +591,58 @@ class _GiftListScreenState extends State<GiftListScreen> {
         );
       }
     }
+  }
+
+  void _showAddOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.add),
+                title: const Text('Add Single Gift'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddGiftDialog(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.playlist_add),
+                title: const Text('Add Multiple Gifts'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final userProvider = context.read<UserProvider>();
+                  final familyGroupId = (await userProvider.getUserData(widget.userId))?.familyGroupId;
+                  
+                  if (familyGroupId == null) {
+                    if (mounted && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Error: No family group found')),
+                      );
+                    }
+                    return;
+                  }
+
+                  if (!mounted) return;
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => BatchAddGiftsScreen(
+                        userId: widget.userId,
+                        familyGroupId: familyGroupId,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'dart:async';  // Add for Timer
 import '../models/gift.dart';
+import '../services/gift_service.dart';
+import '../providers/gift_provider.dart';
 
 class GiftFormDialog extends StatefulWidget {
   final Gift? gift;
@@ -27,6 +31,9 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
   late final TextEditingController _categoryController;
   List<String> _categories = [];
   bool _visibility = true;
+  Timer? _categoryAutoSaveTimer;
+  List<String> _allCategories = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -37,24 +44,47 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
       text: widget.gift?.price?.toStringAsFixed(2),
     );
     _urlController = TextEditingController(text: widget.gift?.url);
-    _categoryController = TextEditingController();
+    _categoryController = TextEditingController(
+      text: widget.gift?.categories.join(', ')
+    );
     _categories = widget.gift?.categories ?? [];
     _visibility = widget.gift?.visibility ?? true;
+    
+    _loadExistingCategories();
   }
 
-  void _addCategory() {
-    final category = _categoryController.text.trim();
-    if (category.isNotEmpty && !_categories.contains(category)) {
+  Future<void> _loadExistingCategories() async {
+    final giftService = GiftService();
+    _allCategories = await giftService.getAllCategories(widget.userId);
+    if (mounted) {
       setState(() {
-        _categories.add(category);
-        _categoryController.clear();
+        _isLoading = false;
       });
     }
   }
 
-  void _removeCategory(String category) {
+  void _updateCategories(String value) {
+    _categoryAutoSaveTimer?.cancel();
+    final newCategories = value
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList();
+    
     setState(() {
-      _categories.remove(category);
+      _categories = newCategories;
+    });
+
+    // Only auto-save the categories after a delay
+    _categoryAutoSaveTimer = Timer(const Duration(seconds: 1), () {
+      if (widget.gift != null && mounted) {
+        final data = {
+          ...widget.gift!.toFirestore(),
+          'categories': _categories,
+        };
+        context.read<GiftProvider>().updateGift(widget.gift!.id, data);
+      }
     });
   }
 
@@ -119,25 +149,44 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
                 ),
                 keyboardType: TextInputType.url,
               ),
+              const SizedBox(height: 16),
+              Text(
+                'Categories',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _categoryController,
-                      decoration: const InputDecoration(
-                        labelText: 'Categories',
-                        hintText: 'Add a category',
-                      ),
-                      onFieldSubmitted: (_) => _addCategory(),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: _addCategory,
-                    tooltip: 'Add category',
-                  ),
-                ],
+              if (!_isLoading && _allCategories.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: _allCategories.map((category) => ActionChip(
+                    label: Text(category),
+                    backgroundColor: _categories.contains(category) 
+                      ? Colors.blue.shade100 
+                      : Colors.grey.shade100,
+                    onPressed: () {
+                      setState(() {
+                        if (_categories.contains(category)) {
+                          _categories.remove(category);
+                        } else {
+                          _categories.add(category);
+                        }
+                        _categoryController.text = _categories.join(', ');
+                      });
+                    },
+                  )).toList(),
+                ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _categoryController,
+                decoration: const InputDecoration(
+                  labelText: 'Add Categories',
+                  hintText: 'Enter comma-separated categories',
+                ),
+                onChanged: (value) {
+                  _updateCategories(value);
+                  // Don't trigger form validation or updates for other fields
+                },
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -146,7 +195,12 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
                 children: _categories.map((category) => Chip(
                   label: Text(category),
                   deleteIcon: const Icon(Icons.close, size: 18),
-                  onDeleted: () => _removeCategory(category),
+                  onDeleted: () {
+                    setState(() {
+                      _categories.remove(category);
+                      _categoryController.text = _categories.join(', ');
+                    });
+                  },
                 )).toList(),
               ),
               const SizedBox(height: 16),
@@ -176,22 +230,23 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
         TextButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
-              final giftData = {
+              final price = double.tryParse(_priceController.text);
+              final data = {
                 'name': _nameController.text.trim(),
                 'description': _descriptionController.text.trim(),
-                'price': _priceController.text.isNotEmpty
-                    ? double.parse(_priceController.text)
-                    : null,
-                'url': _urlController.text.isNotEmpty
-                    ? _urlController.text.trim()
-                    : null,
+                'familyGroupId': widget.familyGroupId,
+                if (price != null) 'price': price,
+                if (_urlController.text.isNotEmpty)
+                  'url': _urlController.text.trim(),
                 'categories': _categories,
                 'visibility': _visibility,
-                'userId': widget.userId,
-                'familyGroupId': widget.familyGroupId,
-                if (widget.gift != null) 'id': widget.gift!.id,
+                if (widget.gift != null) ...{
+                  'purchased': widget.gift!.purchased,
+                  'purchasedBy': widget.gift!.purchasedBy,
+                  'createdAt': widget.gift!.createdAt,
+                }
               };
-              Navigator.pop(context, giftData);
+              Navigator.pop(context, data);
             }
           },
           child: Text(widget.gift == null ? 'Add' : 'Save'),
@@ -202,6 +257,7 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
 
   @override
   void dispose() {
+    _categoryAutoSaveTimer?.cancel();
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
