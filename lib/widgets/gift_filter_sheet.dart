@@ -31,14 +31,23 @@ class GiftFilterSheet extends StatelessWidget {
           Wrap(
             spacing: 8.0,
             children: GiftSortOption.values.map((option) {
-              return ChoiceChip(
-                label: Text(_getSortOptionLabel(option)),
-                selected: sortOption == option,
-                onSelected: (selected) {
-                  if (selected) {
-                    onSortOptionChanged(option);
-                  }
-                },
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: FilterChip(
+                  label: Text(_getSortOptionLabel(option)),
+                  selected: sortOption == option,
+                  onSelected: (selected) {
+                    if (selected) {
+                      onSortOptionChanged(option);
+                    }
+                  },
+                  backgroundColor: Colors.blue.shade50,
+                  selectedColor: Colors.blue.shade100,
+                  checkmarkColor: Colors.blue.shade700,
+                  labelStyle: TextStyle(
+                    color: sortOption == option ? Colors.blue.shade700 : Colors.blue.shade900,
+                  ),
+                ),
               );
             }).toList(),
           ),
@@ -48,18 +57,26 @@ class GiftFilterSheet extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
-          // Add category filter UI here
           Wrap(
             spacing: 8.0,
             children: [
-              ChoiceChip(
-                label: const Text('All'),
-                selected: selectedCategory == null,
-                onSelected: (selected) {
-                  if (selected) {
-                    onCategoryChanged(null);
-                  }
-                },
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: FilterChip(
+                  label: const Text('All'),
+                  selected: selectedCategory == null,
+                  onSelected: (selected) {
+                    if (selected) {
+                      onCategoryChanged(null);
+                    }
+                  },
+                  backgroundColor: Colors.blue.shade50,
+                  selectedColor: Colors.blue.shade100,
+                  checkmarkColor: Colors.blue.shade700,
+                  labelStyle: TextStyle(
+                    color: selectedCategory == null ? Colors.blue.shade700 : Colors.blue.shade900,
+                  ),
+                ),
               ),
               // You might want to add more category options here
             ],

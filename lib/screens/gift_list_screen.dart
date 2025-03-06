@@ -243,53 +243,99 @@ class _GiftListScreenState extends State<GiftListScreen> {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: ListTile(
-        title: Text(
-          gift.name,
-          style: TextStyle(
-            decoration: gift.purchased ? TextDecoration.lineThrough : null,
-          ),
-        ),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(gift.description),
-            if (gift.price != null)
-              Text(
-                'Price: \$${gift.price!.toStringAsFixed(2)}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            if (gift.category != null)
-              Chip(
-                label: Text(gift.category!),
-                backgroundColor: Colors.blue.shade100,
-              ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (gift.url != null)
-              IconButton(
-                icon: const Icon(Icons.link),
-                onPressed: () => _openGiftUrl(gift.url!),
-                tooltip: 'Open product link',
-              ),
-            if (canPurchase || isPurchaser)
-              IconButton(
-                icon: Icon(
-                  gift.purchased ? Icons.check_circle : Icons.check_circle_outline,
-                  color: gift.purchased ? Colors.green : null,
+            // Title and action buttons row
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    gift.name,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      decoration: gift.purchased ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
                 ),
-                onPressed: () => _togglePurchaseStatus(gift),
-                tooltip: gift.purchased ? 'Mark as unpurchased' : 'Mark as purchased',
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (gift.url != null)
+                      IconButton(
+                        icon: const Icon(Icons.link),
+                        onPressed: () => _openGiftUrl(gift.url!),
+                        tooltip: 'Open product link',
+                      ),
+                    if (canPurchase || isPurchaser)
+                      IconButton(
+                        icon: Icon(
+                          gift.purchased ? Icons.check_circle : Icons.check_circle_outline,
+                          color: gift.purchased ? Colors.green : null,
+                        ),
+                        onPressed: () => _togglePurchaseStatus(gift),
+                        tooltip: gift.purchased ? 'Mark as unpurchased' : 'Mark as purchased',
+                      ),
+                    if (widget.isCurrentUser)
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _showEditGiftDialog(context, gift),
+                        tooltip: 'Edit gift',
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Description
+            if (gift.description.isNotEmpty) ...[
+              Text(
+                gift.description,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
-            if (widget.isCurrentUser)
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () => _showEditGiftDialog(context, gift),
-                tooltip: 'Edit gift',
-              ),
+              const SizedBox(height: 8),
+            ],
+            // Price and category row
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (gift.price != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '\$${gift.price!.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                if (gift.price != null && gift.category != null)
+                  const SizedBox(width: 8),
+                if (gift.category != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      gift.category!,
+                      style: TextStyle(
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
