@@ -53,13 +53,11 @@ jobs:
       - name: Deploy to Dev Environment
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          firebaseToolsVersion: v13.3.1
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIKILEET }}'
           projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
           target: preview
           channelId: live
-          message: "Deploy preview for PR #${{ github.event.number }}"
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
