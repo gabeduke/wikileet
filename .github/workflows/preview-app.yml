@@ -57,6 +57,25 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIKILEET }}'
           projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
           site: wikileet-dev
-          channelId: live
+          message: "Deploy preview for PR #${{ github.event.number }}"
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
+
+      - name: Find Comment
+        uses: peter-evans/find-comment@v2
+        id: fc
+        with:
+          issue-number: ${{ github.event.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Preview deployment
+          
+      - name: Comment PR
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.number }}
+          body: |
+            📝 Preview deployment is ready!
+            
+            Preview URL: https://wikileet-dev.web.app
+          edit-mode: replace
