@@ -55,3 +55,5 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIKILEET }}'
           projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
           channelId: live
+        env:
+          FIREBASE_CLI_EXPERIMENTS: webframeworks

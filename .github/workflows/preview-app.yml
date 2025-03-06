@@ -58,4 +58,5 @@ jobs:
           projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
           channelId: pr-${{ github.event.number }}
         env:
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
           FIREBASE_CLI_PREVIEWS: hostingchannels
