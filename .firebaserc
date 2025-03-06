@@ -5,11 +5,11 @@
   "targets": {
     "wikileet": {
       "hosting": {
-        "production": [
-          "wikileet"
-        ],
-        "preview": [
+        "wikileet-dev": [
           "wikileet-dev"
+        ],
+        "wikileet": [
+          "wikileet"
         ]
       }
     }
