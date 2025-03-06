@@ -1,6 +1,31 @@
 {
   "hosting": {
-    "source": "./"
+    "source": "./",
+    "target": "production",
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "targets": {
+    "wikileet": {
+      "hosting": {
+        "production": [
+          "wikileet"
+        ],
+        "preview": [
+          "preview-wikileet"
+        ]
+      }
+    }
   },
   "firestore": {
     "rules": "firestore.rules",

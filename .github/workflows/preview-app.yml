@@ -56,7 +56,8 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WIKILEET }}'
           projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
-          channelId: pr-${{ github.event.number }}
+          target: preview
+          expires: 7d
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
           FIREBASE_CLI_PREVIEWS: hostingchannels
