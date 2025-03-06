@@ -1,7 +1,7 @@
 {
   "hosting": [
     {
-      "target": "production",
+      "target": "wikileet",
       "public": "build/web",
       "ignore": [
         "firebase.json",
@@ -16,7 +16,7 @@
       ]
     },
     {
-      "target": "preview",
+      "target": "wikileet-dev",
       "public": "build/web",
       "ignore": [
         "firebase.json",
