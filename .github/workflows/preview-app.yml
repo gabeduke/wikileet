@@ -1,0 +1,31 @@
+name: Preview App
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '2.5.3'
+
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Build Flutter web app
+      run: flutter build web
+
+    - name: Deploy to Firebase Hosting
+      env:
+        FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+      run: |
+        firebase use --add ${{ secrets.FIREBASE_PROJECT_ID }}
+        firebase deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }} --message "Deploying preview for PR #${{ github.event.number }}"
