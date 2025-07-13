@@ -43,53 +43,39 @@ class FamilyViewModel with ChangeNotifier {
 
   /// Initialize the view model with user data and start subscriptions
   Future<void> getUserFamilyGroup(String userId) async {
-    print('Initializing FamilyViewModel for user: $userId');
-    if (_isDataLoaded) {
-      print('Data already loaded, skipping initialization');
-      return;
+    if (_isDataLoaded && !isLoading) {
+      return; // Skip if already loaded and not in loading state
     }
 
-    _setLoading(true);
+    // Set loading only if not already loading
+    if (!isLoading) {
+      _setLoading(true);
+    }
+
     try {
-      // First get initial data
       final user = await _userService.getUserProfile(userId);
-      print('Initial user profile fetched: ${user?.familyGroupId}');
       
       if (user != null) {
-        familyId = user.familyGroupId;
-        houseId = user.houseId;
+        // Only update and reload if the family ID changed
+        if (familyId != user.familyGroupId || houseId != user.houseId) {
+          familyId = user.familyGroupId;
+          houseId = user.houseId;
 
-        if (user.familyGroupId != null) {
-          try {
-            // Try to load the family group
+          if (user.familyGroupId != null) {
             await _loadInitialFamilyData();
-          } catch (e) {
-            print('Failed to load family data, resetting user family group: $e');
-            // If the family group doesn't exist, reset the user's data
-            await _userService.updateUser(userId, {
-              'familyGroupId': null,
-              'houseId': null
-            });
-            familyId = null;
-            houseId = null;
-            familyGroups = [];
           }
+          _startSubscriptions(userId);
         }
-        
-        // Start subscriptions after initial data load
-        _startSubscriptions(userId);
       }
       
       _isDataLoaded = true;
-      notifyListeners();
-    } catch (e, stackTrace) {
-      print('Error in getUserFamilyGroup: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       errorMessage = 'Failed to initialize family data: $e';
       _isDataLoaded = false;
     } finally {
       _setLoading(false);
     }
+    notifyListeners();
   }
 
   Future<void> _loadInitialFamilyData() async {
@@ -97,9 +83,6 @@ class FamilyViewModel with ChangeNotifier {
     if (familyId == null) return;
 
     final familyGroup = await _familyService.getFamilyGroupById(familyId!);
-    if (familyGroup == null) {
-      throw Exception('Family group not found');
-    }
 
     final houses = await _familyService.getHousesForFamilyGroup(familyId!);
     

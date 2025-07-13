@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:wikileet/screens/no_family_group_screen.dart';
 import 'package:wikileet/screens/gift_list_screen.dart';
@@ -7,7 +6,6 @@ import 'package:wikileet/screens/family_list_screen.dart';  // Updated import
 import 'package:wikileet/viewmodels/family_viewmodel.dart';
 
 import '../providers/user_provider.dart';
-import '../services/auth_service.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -122,7 +120,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       const Divider(height: 1),
                       Expanded(
                         child: GiftListScreen(
-                          userId: userId!, 
+                          userId: userId, 
                           isCurrentUser: true,
                           useInternalScaffold: false,
                         ),

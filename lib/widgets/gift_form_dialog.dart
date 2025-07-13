@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
+import 'package:provider/provider.dart';
+import 'dart:async';  // Add for Timer
 import '../models/gift.dart';
+import '../services/gift_service.dart';
+import '../providers/gift_provider.dart';
 
 class GiftFormDialog extends StatefulWidget {
   final Gift? gift;
@@ -25,7 +31,11 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
   late final TextEditingController _priceController;
   late final TextEditingController _urlController;
   late final TextEditingController _categoryController;
+  List<String> _categories = [];
   bool _visibility = true;
+  Timer? _categoryAutoSaveTimer;
+  List<String> _allCategories = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -36,18 +46,48 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
       text: widget.gift?.price?.toStringAsFixed(2),
     );
     _urlController = TextEditingController(text: widget.gift?.url);
-    _categoryController = TextEditingController(text: widget.gift?.category);
+    _categoryController = TextEditingController(
+      text: widget.gift?.categories.join(', ')
+    );
+    _categories = widget.gift?.categories ?? [];
     _visibility = widget.gift?.visibility ?? true;
+    
+    _loadExistingCategories();
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _descriptionController.dispose();
-    _priceController.dispose();
-    _urlController.dispose();
-    _categoryController.dispose();
-    super.dispose();
+  Future<void> _loadExistingCategories() async {
+    final giftService = GiftService();
+    _allCategories = await giftService.getAllCategories(widget.userId);
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _updateCategories(String value) {
+    _categoryAutoSaveTimer?.cancel();
+    final newCategories = value
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList();
+    
+    setState(() {
+      _categories = newCategories;
+    });
+
+    // Only auto-save the categories after a delay
+    _categoryAutoSaveTimer = Timer(const Duration(seconds: 1), () {
+      if (widget.gift != null && mounted) {
+        final data = {
+          ...widget.gift!.toFirestore(),
+          'categories': _categories,
+        };
+        context.read<GiftProvider>().updateGift(widget.gift!.id, data);
+      }
+    });
   }
 
   @override
@@ -59,6 +99,7 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
                 controller: _nameController,
@@ -67,8 +108,17 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
                   hintText: 'Enter gift name',
                 ),
                 validator: (value) {
+                  if (kDebugMode) {
+                    print('Validating gift name: $value');
+                  }
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a gift name';
+                    if (kDebugMode) {
+                      print('Gift name validation failed - empty name');
+                    }
+                    return 'Please enter a name';
+                  }
+                  if (kDebugMode) {
+                    print('Gift name validation passed');
                   }
                   return null;
                 },
@@ -110,13 +160,59 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
                 ),
                 keyboardType: TextInputType.url,
               ),
+              const SizedBox(height: 16),
+              Text(
+                'Categories',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
+              if (!_isLoading && _allCategories.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: _allCategories.map((category) => ActionChip(
+                    label: Text(category),
+                    backgroundColor: _categories.contains(category) 
+                      ? Colors.blue.shade100 
+                      : Colors.grey.shade100,
+                    onPressed: () {
+                      setState(() {
+                        if (_categories.contains(category)) {
+                          _categories.remove(category);
+                        } else {
+                          _categories.add(category);
+                        }
+                        _categoryController.text = _categories.join(', ');
+                      });
+                    },
+                  )).toList(),
+                ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _categoryController,
                 decoration: const InputDecoration(
-                  labelText: 'Category (optional)',
-                  hintText: 'Enter category',
+                  labelText: 'Add Categories',
+                  hintText: 'Enter comma-separated categories',
                 ),
+                onChanged: (value) {
+                  _updateCategories(value);
+                  // Don't trigger form validation or updates for other fields
+                },
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: _categories.map((category) => Chip(
+                  label: Text(category),
+                  deleteIcon: const Icon(Icons.close, size: 18),
+                  onDeleted: () {
+                    setState(() {
+                      _categories.remove(category);
+                      _categoryController.text = _categories.join(', ');
+                    });
+                  },
+                )).toList(),
               ),
               const SizedBox(height: 16),
               Row(
@@ -143,31 +239,95 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
           child: const Text('Cancel'),
         ),
         TextButton(
-          onPressed: () {
+          onPressed: () async {
             if (_formKey.currentState!.validate()) {
-              final giftData = {
-                'name': _nameController.text.trim(),
-                'description': _descriptionController.text.trim(),
-                'price': _priceController.text.isNotEmpty
-                    ? double.parse(_priceController.text)
-                    : null,
-                'url': _urlController.text.isNotEmpty
-                    ? _urlController.text.trim()
-                    : null,
-                'category': _categoryController.text.isNotEmpty
-                    ? _categoryController.text.trim()
-                    : null,
-                'visibility': _visibility,
-                'userId': widget.userId,
-                'familyGroupId': widget.familyGroupId,
-                if (widget.gift != null) 'id': widget.gift!.id,
-              };
-              Navigator.pop(context, giftData);
+              if (kDebugMode) {
+                print('\n=== GiftFormDialog - Form Submission Started ===');
+              }
+              
+              // Show loading indicator
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (BuildContext context) {
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                );
+              }
+              
+              try {
+                final price = double.tryParse(_priceController.text);
+                final data = {
+                  'id': widget.gift?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                  'name': _nameController.text.trim(),
+                  'description': _descriptionController.text.trim(),
+                  'familyGroupId': widget.familyGroupId,
+                  if (price != null) 'price': price,
+                  if (_urlController.text.isNotEmpty)
+                    'url': _urlController.text.trim(),
+                  'categories': _categories,
+                  'visibility': _visibility,
+                  'purchased': widget.gift?.purchased ?? false,
+                  'purchasedBy': widget.gift?.purchasedBy,
+                  'createdAt': widget.gift?.createdAt ?? Timestamp.now(),
+                };
+
+                if (kDebugMode) {
+                  print('Submitting gift data:');
+                  print(data);
+                }
+
+                // Wait for the gift to be added
+                await context.read<GiftProvider>().addGift(data);
+                
+                if (kDebugMode) {
+                  print('Gift successfully added');
+                  print('=== GiftFormDialog - Form Submission Completed ===\n');
+                }
+
+                // Close loading indicator
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+
+                // Close dialog
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              } catch (e) {
+                if (kDebugMode) {
+                  print('Error submitting gift: $e');
+                }
+                
+                // Close loading indicator
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+
+                // Show error
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to add gift: $e')),
+                  );
+                }
+              }
             }
           },
           child: Text(widget.gift == null ? 'Add' : 'Save'),
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _categoryAutoSaveTimer?.cancel();
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    _urlController.dispose();
+    _categoryController.dispose();
+    super.dispose();
   }
 }

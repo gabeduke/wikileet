@@ -379,3 +379,6 @@ Currently working on Family Group and House Structure:
 - Add comprehensive logging
 - Document code and architecture
 - Add automated testing
+
+# Key Items
+- data should only ever be accessed from the service layer
