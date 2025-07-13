@@ -10,8 +10,8 @@ class GiftFilterSheet extends StatelessWidget {
   final bool groupByCategory;
   final Function(bool) onGroupingChanged;
   final bool isCurrentUser;
-  final Function()? onManageCategories;
   final List<String> pinnedCategories;
+  final Function(String, bool) onPinChanged;
 
   const GiftFilterSheet({
     super.key,
@@ -23,13 +23,13 @@ class GiftFilterSheet extends StatelessWidget {
     required this.groupByCategory,
     required this.onGroupingChanged,
     this.isCurrentUser = false,
-    this.onManageCategories,
     this.pinnedCategories = const [],
+    required this.onPinChanged,
   });
 
   List<String> _getOrderedCategories() {
     final ordered = <String>[];
-    ordered.addAll(pinnedCategories);
+    ordered.addAll(pinnedCategories.where((c) => availableCategories.contains(c)));
     ordered.addAll(availableCategories.where((c) => !pinnedCategories.contains(c)));
     return ordered;
   }
@@ -37,135 +37,118 @@ class GiftFilterSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final orderedCategories = _getOrderedCategories();
-
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Sort By',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8.0,
-            children: GiftSortOption.values.map((option) {
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: FilterChip(
-                  label: Text(_getSortOptionLabel(option)),
-                  selected: sortOption == option,
-                  onSelected: (selected) {
-                    if (selected) {
-                      onSortOptionChanged(option);
-                    }
-                  },
-                  backgroundColor: Colors.blue.shade50,
-                  selectedColor: Colors.blue.shade100,
-                  checkmarkColor: Colors.blue.shade700,
-                  labelStyle: TextStyle(
-                    color: sortOption == option ? Colors.blue.shade700 : Colors.blue.shade900,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Text(
-                'View Options',
-                style: Theme.of(context).textTheme.titleMedium,
+    final theme = Theme.of(context);
+    
+    return SizedBox(
+      width: 280,
+      child: IntrinsicHeight(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Sort by:', style: theme.textTheme.titleSmall),
+                ],
               ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () => onGroupingChanged(!groupByCategory),
-                icon: Icon(
-                  groupByCategory ? Icons.grid_view : Icons.list,
-                  size: 20,
+            ),
+            for (var option in GiftSortOption.values)
+              RadioListTile<GiftSortOption>(
+                title: Text(
+                  switch (option) {
+                    GiftSortOption.dateAdded => 'Date Added',
+                    GiftSortOption.name => 'Name',
+                    GiftSortOption.price => 'Price',
+                  },
+                  style: theme.textTheme.bodyMedium,
                 ),
-                label: Text(
-                  groupByCategory ? 'Show as List' : 'Group by Category',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                value: option,
+                groupValue: sortOption,
+                onChanged: (value) => onSortOptionChanged(value!),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                dense: true,
+              ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('View:', style: theme.textTheme.titleSmall),
+                  Switch(
+                    value: groupByCategory,
+                    onChanged: onGroupingChanged,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                groupByCategory ? 'Grouped by tags' : 'List view',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+            if (availableCategories.isNotEmpty) ...[
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Filter by tag:', style: theme.textTheme.titleSmall),
+                    if (isCurrentUser)
+                      Text(
+                        'Long press to pin',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontStyle: FontStyle.italic,
+                          color: theme.hintColor,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      FilterChip(
+                        label: const Text('All'),
+                        selected: selectedCategory == null,
+                        onSelected: (_) => onCategoryChanged(null),
+                        showCheckmark: false,
+                      ),
+                      ...orderedCategories.map((category) {
+                        final isPinned = pinnedCategories.contains(category);
+                        return GestureDetector(
+                          onLongPress: isCurrentUser ? () {
+                            onPinChanged(category, !isPinned);
+                          } : null,
+                          child: FilterChip(
+                            label: Text(category),
+                            selected: category == selectedCategory,
+                            onSelected: (_) => onCategoryChanged(category),
+                            avatar: isPinned ? const Icon(Icons.push_pin, size: 14) : null,
+                            showCheckmark: false,
+                            backgroundColor: isPinned ? Colors.blue.shade50 : null,
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Text(
-                'Filter by Category',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const Spacer(),
-              if (isCurrentUser && onManageCategories != null)
-                TextButton.icon(
-                  onPressed: onManageCategories,
-                  icon: const Icon(Icons.settings, size: 20),
-                  label: const Text('Manage'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8.0,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: FilterChip(
-                  label: const Text('All'),
-                  selected: selectedCategory == null,
-                  onSelected: (selected) {
-                    if (selected) {
-                      onCategoryChanged(null);
-                    }
-                  },
-                  backgroundColor: Colors.blue.shade50,
-                  selectedColor: Colors.blue.shade100,
-                  checkmarkColor: Colors.blue.shade700,
-                  labelStyle: TextStyle(
-                    color: selectedCategory == null ? Colors.blue.shade700 : Colors.blue.shade900,
-                  ),
-                ),
-              ),
-              ...orderedCategories.map((category) => Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: FilterChip(
-                  label: Text(category),
-                  selected: selectedCategory == category,
-                  onSelected: (selected) {
-                    if (selected) {
-                      onCategoryChanged(category);
-                    }
-                  },
-                  avatar: pinnedCategories.contains(category) ? 
-                    Icon(Icons.push_pin, size: 16, color: Colors.blue.shade700) : null,
-                  backgroundColor: Colors.blue.shade50,
-                  selectedColor: Colors.blue.shade100,
-                  checkmarkColor: Colors.blue.shade700,
-                  labelStyle: TextStyle(
-                    color: selectedCategory == category ? Colors.blue.shade700 : Colors.blue.shade900,
-                  ),
-                ),
-              )),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
-  }
-
-  String _getSortOptionLabel(GiftSortOption option) {
-    switch (option) {
-      case GiftSortOption.name:
-        return 'Name';
-      case GiftSortOption.price:
-        return 'Price';
-      case GiftSortOption.dateAdded:
-        return 'Date Added';
-    }
   }
 }

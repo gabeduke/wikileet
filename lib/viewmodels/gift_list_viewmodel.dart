@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/gift.dart';
 import '../services/gift_service.dart';
 
@@ -7,6 +6,7 @@ class GiftListViewModel extends ChangeNotifier {
   final GiftService giftService;
   final String giftListOwnerId;
   final String currentUserId;
+  final String familyGroupId;
   
   Stream<List<Gift>>? _giftsStream;
   List<Gift> _gifts = [];
@@ -18,6 +18,7 @@ class GiftListViewModel extends ChangeNotifier {
     required this.giftService,
     required this.giftListOwnerId,
     required this.currentUserId,
+    required this.familyGroupId,
   }) {
     _initGiftsStream();
   }
@@ -29,14 +30,7 @@ class GiftListViewModel extends ChangeNotifier {
   bool get isOwner => currentUserId == giftListOwnerId;
 
   void _initGiftsStream() {
-    _giftsStream = FirebaseFirestore.instance
-        .collection('users')
-        .doc(giftListOwnerId)
-        .collection('gifts')
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Gift.fromFirestore(doc))
-            .toList());
+    _giftsStream = giftService.getGiftListStreamForFamily(giftListOwnerId, familyGroupId);
 
     _giftsStream?.listen(
       (gifts) {

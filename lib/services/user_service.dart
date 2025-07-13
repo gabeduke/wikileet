@@ -130,4 +130,31 @@ class UserService {
   auth.User? getCurrentUser() {
     return _auth?.currentUser;
   }
+
+  /// Get a stream of user data
+  Stream<app_user.User?> getUserStream(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .map((doc) {
+          if (!doc.exists) return null;
+          return app_user.User.fromJson(doc);
+        });
+  }
+
+  /// Get user's family group ID
+  Future<String?> getUserFamilyGroupId(String userId) async {
+    final doc = await _firestore.collection('users').doc(userId).get();
+    return doc.data()?['familyGroupId'] as String?;
+  }
+
+  /// Get multiple users by their IDs
+  Future<List<app_user.User>> getMultipleUsers(List<String> userIds) async {
+    if (userIds.isEmpty) return [];
+    
+    final futures = userIds.map((id) => getUserProfile(id));
+    final users = await Future.wait(futures);
+    return users.whereType<app_user.User>().toList();
+  }
 }

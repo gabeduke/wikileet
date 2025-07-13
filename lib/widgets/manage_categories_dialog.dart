@@ -44,6 +44,12 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> {
       if (mounted) {
         Navigator.of(context).pop(_pinnedCategories);
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving pinned categories: $e')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -56,8 +62,12 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> {
     return AlertDialog(
       title: const Text('Manage Categories'),
       content: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+          ? const SizedBox(
+              height: 100,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : SizedBox(
+              width: double.maxFinite,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,29 +77,40 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> {
                     style: TextStyle(fontSize: 14),
                   ),
                   const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: widget.allCategories.map((category) {
-                      final isPinned = _pinnedCategories.contains(category);
-                      return FilterChip(
-                        label: Text(category),
-                        selected: isPinned,
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _pinnedCategories.add(category);
-                            } else {
-                              _pinnedCategories.remove(category);
-                            }
-                          });
-                        },
-                        avatar: isPinned ? const Icon(Icons.push_pin, size: 18) : null,
-                        backgroundColor: Colors.grey.shade100,
-                        selectedColor: Colors.blue.shade100,
-                      );
-                    }).toList(),
-                  ),
+                  if (widget.allCategories.isEmpty)
+                    const Text(
+                      'No categories available yet. Categories will appear here as you add them to gifts.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: widget.allCategories.map((category) {
+                            final isPinned = _pinnedCategories.contains(category);
+                            return FilterChip(
+                              label: Text(category),
+                              selected: isPinned,
+                              avatar: isPinned ? const Icon(Icons.push_pin, size: 16) : null,
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _pinnedCategories.add(category);
+                                  } else {
+                                    _pinnedCategories.remove(category);
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -98,7 +119,7 @@ class _ManageCategoriesDialogState extends State<ManageCategoriesDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
+        FilledButton(
           onPressed: _isLoading ? null : _savePinnedCategories,
           child: const Text('Save'),
         ),

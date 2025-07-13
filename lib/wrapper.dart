@@ -6,25 +6,28 @@ import 'package:provider/provider.dart';
 import 'package:wikileet/providers/user_provider.dart';
 import 'package:wikileet/providers/family_group_provider.dart';  // Added missing import
 import 'package:wikileet/services/auth_service.dart';
-import 'package:wikileet/models/user.dart' as app_user;
 import 'package:wikileet/viewmodels/family_viewmodel.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/no_family_group_screen.dart';
 
-class Wrapper extends StatelessWidget {
+class Wrapper extends StatefulWidget {
   const Wrapper({super.key});
 
   @override
+  State<Wrapper> createState() => _WrapperState();
+}
+
+class _WrapperState extends State<Wrapper> {
+  String? _lastUserId;
+  String? _lastFamilyGroupId;
+
+  @override
   Widget build(BuildContext context) {
-    print('Wrapper build called');
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        print('Wrapper: Auth state: ${snapshot.connectionState}, hasData: ${snapshot.hasData}');
-        
         if (snapshot.connectionState == ConnectionState.waiting) {
-          print('Wrapper: Auth state is waiting');
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
@@ -32,7 +35,6 @@ class Wrapper extends StatelessWidget {
 
         final user = snapshot.data;
         if (user == null) {
-          print('Wrapper: No authenticated user found');
           return LoginScreen(
             onSignIn: () async {
               try {
@@ -50,42 +52,41 @@ class Wrapper extends StatelessWidget {
           );
         }
 
-        print('Wrapper: User authenticated with ID: ${user.uid}');
-        
-        final familyGroupProvider = Provider.of<FamilyGroupProvider>(context);
-        final userProvider = Provider.of<UserProvider>(context);
-        final familyViewModel = Provider.of<FamilyViewModel>(context, listen: false);
-        
-        // Initialize providers if needed
-        if (!familyGroupProvider.isInitialized) {
-          print('Wrapper: Initializing family group provider');
-          familyGroupProvider.initializeStream(user.uid);
+        // Only proceed if the user ID changed
+        if (_lastUserId != user.uid) {
+          _lastUserId = user.uid;
+          final familyGroupProvider = Provider.of<FamilyGroupProvider>(context, listen: false);
+          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          
+          // Initialize providers only if needed
+          if (!familyGroupProvider.isInitialized) {
+            familyGroupProvider.initializeStream(user.uid);
+          }
         }
+        
+        final userProvider = Provider.of<UserProvider>(context);
+        final familyGroupProvider = Provider.of<FamilyGroupProvider>(context);
 
-        // Show loading while providers are initializing or we're waiting for initial user data
+        // Show loading while providers are initializing
         if (familyGroupProvider.isLoading || !userProvider.isInitialized) {
-          print('Wrapper: Still loading... FGP loading: ${familyGroupProvider.isLoading}, UP initialized: ${userProvider.isInitialized}');
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        // Check if user has a family group
         final hasFamilyGroup = userProvider.familyGroupId != null;
-        print('Wrapper: User familyGroupId: ${userProvider.familyGroupId}');
 
-        if (hasFamilyGroup) {
-          print('Wrapper: User has family group, initializing FamilyViewModel');
-          // Initialize FamilyViewModel when user has a family group
-          familyViewModel.getUserFamilyGroup(user.uid);
+        // Only initialize FamilyViewModel if family group changed
+        if (hasFamilyGroup && _lastFamilyGroupId != userProvider.familyGroupId) {
+          _lastFamilyGroupId = userProvider.familyGroupId;
+          Provider.of<FamilyViewModel>(context, listen: false)
+              .getUserFamilyGroup(user.uid);
         }
 
         if (!hasFamilyGroup) {
-          print('Wrapper: User has no family group, showing NoFamilyGroupScreen');
           return const NoFamilyGroupScreen();
         }
 
-        print('Wrapper: User has family group, showing main navigation');
         return const MainNavigationScreen();
       },
     );

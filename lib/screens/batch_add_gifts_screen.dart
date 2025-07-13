@@ -1,7 +1,6 @@
 // lib/screens/batch_add_gifts_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wikileet/models/gift.dart';
 import 'package:wikileet/services/gift_service.dart';
 
@@ -75,7 +74,7 @@ class _BatchAddGiftsScreenState extends State<BatchAddGiftsScreen> {
           categories: _categories[i],
           visibility: true,
           purchased: false,
-          createdAt: Timestamp.now(),
+          createdAt: widget.giftService.getCurrentTimestamp(),
         ));
       }
     }

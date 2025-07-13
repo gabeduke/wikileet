@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
 import 'package:provider/provider.dart';
 import 'dart:async';  // Add for Timer
 import '../models/gift.dart';
@@ -106,8 +108,17 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
                   hintText: 'Enter gift name',
                 ),
                 validator: (value) {
+                  if (kDebugMode) {
+                    print('Validating gift name: $value');
+                  }
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a gift name';
+                    if (kDebugMode) {
+                      print('Gift name validation failed - empty name');
+                    }
+                    return 'Please enter a name';
+                  }
+                  if (kDebugMode) {
+                    print('Gift name validation passed');
                   }
                   return null;
                 },
@@ -228,25 +239,79 @@ class _GiftFormDialogState extends State<GiftFormDialog> {
           child: const Text('Cancel'),
         ),
         TextButton(
-          onPressed: () {
+          onPressed: () async {
             if (_formKey.currentState!.validate()) {
-              final price = double.tryParse(_priceController.text);
-              final data = {
-                'name': _nameController.text.trim(),
-                'description': _descriptionController.text.trim(),
-                'familyGroupId': widget.familyGroupId,
-                if (price != null) 'price': price,
-                if (_urlController.text.isNotEmpty)
-                  'url': _urlController.text.trim(),
-                'categories': _categories,
-                'visibility': _visibility,
-                if (widget.gift != null) ...{
-                  'purchased': widget.gift!.purchased,
-                  'purchasedBy': widget.gift!.purchasedBy,
-                  'createdAt': widget.gift!.createdAt,
+              if (kDebugMode) {
+                print('\n=== GiftFormDialog - Form Submission Started ===');
+              }
+              
+              // Show loading indicator
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (BuildContext context) {
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                );
+              }
+              
+              try {
+                final price = double.tryParse(_priceController.text);
+                final data = {
+                  'id': widget.gift?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                  'name': _nameController.text.trim(),
+                  'description': _descriptionController.text.trim(),
+                  'familyGroupId': widget.familyGroupId,
+                  if (price != null) 'price': price,
+                  if (_urlController.text.isNotEmpty)
+                    'url': _urlController.text.trim(),
+                  'categories': _categories,
+                  'visibility': _visibility,
+                  'purchased': widget.gift?.purchased ?? false,
+                  'purchasedBy': widget.gift?.purchasedBy,
+                  'createdAt': widget.gift?.createdAt ?? Timestamp.now(),
+                };
+
+                if (kDebugMode) {
+                  print('Submitting gift data:');
+                  print(data);
                 }
-              };
-              Navigator.pop(context, data);
+
+                // Wait for the gift to be added
+                await context.read<GiftProvider>().addGift(data);
+                
+                if (kDebugMode) {
+                  print('Gift successfully added');
+                  print('=== GiftFormDialog - Form Submission Completed ===\n');
+                }
+
+                // Close loading indicator
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+
+                // Close dialog
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              } catch (e) {
+                if (kDebugMode) {
+                  print('Error submitting gift: $e');
+                }
+                
+                // Close loading indicator
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+
+                // Show error
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to add gift: $e')),
+                  );
+                }
+              }
             }
           },
           child: Text(widget.gift == null ? 'Add' : 'Save'),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';  // Add this import for kDebugMode
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/gift.dart';
@@ -35,21 +36,51 @@ class _GiftListScreenState extends State<GiftListScreen> {
   GiftSortOption _sortOption = GiftSortOption.dateAdded;
   final TextEditingController _searchController = TextEditingController();
   bool _isInitialized = false;
-  bool _groupByCategory = true; // New state variable
+  bool _isInitializing = false;
+  bool _groupByCategory = true;
   List<String> _pinnedCategories = [];
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    // Initialize gift stream for this user only once
-    if (!_isInitialized) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.read<GiftProvider>().initializeGiftStreamForUser(widget.userId);
-          _loadPinnedCategories();
+    _initializeScreen();
+  }
+
+  Future<void> _initializeScreen() async {
+    if (_isInitialized || _isInitializing) return;
+    
+    setState(() {
+      _isInitializing = true;
+      _error = null;
+    });
+    
+    try {
+      final userProvider = context.read<UserProvider>();
+      final giftProvider = context.read<GiftProvider>();
+      
+      // First get the user data to ensure we have the family group ID
+      final userData = await userProvider.getUserData(widget.userId);
+      if (userData?.familyGroupId == null) {
+        throw Exception('No family group found');
+      }
+
+      // Now initialize the gift stream with the user's family group
+      if (mounted) {
+        await giftProvider.initializeGiftStreamForUser(widget.userId);
+        await _loadPinnedCategories();
+        setState(() {
           _isInitialized = true;
-        }
-      });
+          _isInitializing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isInitializing = false;
+        });
+      }
     }
   }
 
@@ -72,11 +103,19 @@ class _GiftListScreenState extends State<GiftListScreen> {
   }
 
   List<Gift> _filterAndSortGifts(List<Gift> gifts) {
+    if (kDebugMode) {
+      print('Filtering gifts - total count: ${gifts.length}');
+      print('Selected category: $_selectedCategory');
+      print('Search query: $_searchQuery');
+    }
+
     return gifts
-        .where((gift) =>
-            _selectedCategory == null ||
-            gift.categories.any((category) => 
-              category.toLowerCase() == _selectedCategory?.toLowerCase()))
+        .where((gift) {
+          if (_selectedCategory == null) return true;
+          if (gift.categories.isEmpty) return _selectedCategory == 'Uncategorized';
+          return gift.categories.any((category) => 
+            category.toLowerCase() == _selectedCategory?.toLowerCase());
+        })
         .where((gift) =>
             _searchQuery.isEmpty ||
             gift.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -97,10 +136,26 @@ class _GiftListScreenState extends State<GiftListScreen> {
   }
 
   Map<String, List<Gift>> _groupGiftsByCategory(List<Gift> gifts) {
+    if (kDebugMode) {
+      print('Grouping gifts by category - total gifts: ${gifts.length}');
+    }
+    
     final groupedGifts = <String, List<Gift>>{};
     for (var gift in gifts) {
-      final category = gift.categories.isNotEmpty ? gift.categories[0] : 'Uncategorized';
-      groupedGifts.putIfAbsent(category, () => []).add(gift);
+      if (gift.categories.isEmpty) {
+        const category = 'Uncategorized';
+        groupedGifts.putIfAbsent(category, () => []).add(gift);
+        if (kDebugMode) {
+          print('Added uncategorized gift: ${gift.name}');
+        }
+      } else {
+        for (var category in gift.categories) {
+          groupedGifts.putIfAbsent(category, () => []).add(gift);
+          if (kDebugMode) {
+            print('Added gift ${gift.name} to category $category');
+          }
+        }
+      }
     }
     return groupedGifts;
   }
@@ -115,51 +170,85 @@ class _GiftListScreenState extends State<GiftListScreen> {
   }
 
   Widget _buildGiftList(List<Gift> gifts) {
+    if (kDebugMode) {
+      print('Building gift list - received ${gifts.length} gifts');
+      for (var gift in gifts) {
+        print('Gift: ${gift.name}, Categories: ${gift.categories.join(", ")}');
+      }
+    }
+
     final filteredGifts = _filterAndSortGifts(gifts);
+    if (kDebugMode) {
+      print('After filtering - ${filteredGifts.length} gifts remain');
+    }
 
     if (filteredGifts.isEmpty) {
-      return const Center(
-        child: Text('No gifts match your search'),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              gifts.isEmpty ? 'No gifts found' : 'No gifts match your filters',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (widget.isCurrentUser && gifts.isEmpty) ...[
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => _showAddOptions(context),
+                child: const Text('Add Your First Gift'),
+              ),
+            ]
+          ],
+        ),
       );
     }
 
     if (!_groupByCategory) {
       return ListView.builder(
         itemCount: filteredGifts.length,
+        padding: const EdgeInsets.symmetric(vertical: 4),
         itemBuilder: (context, index) {
           final gift = filteredGifts[index];
+          if (kDebugMode) {
+            print('Rendering gift at index $index: ${gift.name}');
+          }
           return _buildGiftCard(context, gift);
         },
       );
     }
 
-    // Grouped view
+    // Grouped view logic remains the same
     final groupedGifts = _groupGiftsByCategory(filteredGifts);
     final sortedCategories = groupedGifts.keys.toList()..sort();
 
     return ListView.builder(
       itemCount: sortedCategories.length,
+      padding: const EdgeInsets.symmetric(vertical: 4),
       itemBuilder: (context, index) {
         final category = sortedCategories[index];
         final categoryGifts = groupedGifts[category]!;
+
+        if (kDebugMode) {
+          print('Rendering category $category with ${categoryGifts.length} gifts');
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
               child: Row(
                 children: [
                   Text(
                     category,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: Colors.blue.shade700,
                           fontWeight: FontWeight.bold,
                         ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
                       color: Colors.blue.shade50,
                       borderRadius: BorderRadius.circular(12),
@@ -168,7 +257,7 @@ class _GiftListScreenState extends State<GiftListScreen> {
                       '${categoryGifts.length}',
                       style: TextStyle(
                         color: Colors.blue.shade700,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                   ),
@@ -198,52 +287,115 @@ class _GiftListScreenState extends State<GiftListScreen> {
     }
   }
 
-  void _showFilterSheet() {
-    final giftProvider = context.read<GiftProvider>();
+  void _showFilterSheet(BuildContext context, RenderBox? button) {
+    if (button == null) return;
     
-    showModalBottomSheet(
+    final giftProvider = context.read<GiftProvider>();
+    final position = button.localToGlobal(Offset.zero);
+    final size = button.size;
+    
+    showMenu(
       context: context,
-      builder: (context) => StreamBuilder<List<Gift>>(
-        stream: giftProvider.giftsForUser,
-        builder: (context, snapshot) {
-          final gifts = snapshot.data ?? [];
-          final allCategories = _getUniqueCategories(gifts);
-          
-          return GiftFilterSheet(
-            selectedCategory: _selectedCategory,
-            sortOption: _sortOption,
-            onCategoryChanged: (category) {
-              setState(() {
-                _selectedCategory = category;
-              });
-            },
-            onSortOptionChanged: (option) {
-              setState(() {
-                _sortOption = option;
-              });
-            },
-            groupByCategory: _groupByCategory,
-            onGroupingChanged: (value) {
-              setState(() {
-                _groupByCategory = value;
-              });
-            },
-            availableCategories: allCategories,
-            isCurrentUser: widget.isCurrentUser,
-            pinnedCategories: _pinnedCategories,
-            onManageCategories: widget.isCurrentUser 
-              ? () => _showManageCategoriesDialog(allCategories)
-              : null,
-          );
-        },
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy + size.height,
+        position.dx + size.width,
+        position.dy + size.height,
       ),
+      items: [
+        PopupMenuItem(
+          enabled: false,
+          padding: EdgeInsets.zero,
+          child: StreamBuilder<List<Gift>>(
+            stream: giftProvider.giftsForUser,
+            builder: (context, snapshot) {
+              final gifts = snapshot.data ?? [];
+              final allCategories = _getUniqueCategories(gifts);
+              
+              return GiftFilterSheet(
+                selectedCategory: _selectedCategory,
+                sortOption: _sortOption,
+                onCategoryChanged: (category) {
+                  setState(() {
+                    _selectedCategory = category;
+                  });
+                  Navigator.pop(context);
+                },
+                onSortOptionChanged: (option) {
+                  setState(() {
+                    _sortOption = option;
+                  });
+                  Navigator.pop(context);
+                },
+                groupByCategory: _groupByCategory,
+                onGroupingChanged: (value) {
+                  setState(() {
+                    _groupByCategory = value;
+                  });
+                  Navigator.pop(context);
+                },
+                onPinChanged: (tag, isPinned) {
+                  setState(() {
+                    if (isPinned) {
+                      _pinnedCategories.add(tag);
+                    } else {
+                      _pinnedCategories.remove(tag);
+                    }
+                  });
+                  _savePinnedCategories();
+                },
+                availableCategories: allCategories,
+                isCurrentUser: widget.isCurrentUser,
+                pinnedCategories: _pinnedCategories,
+              );
+            },
+          ),
+        ),
+      ],
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
+  }
+
+  Future<void> _savePinnedCategories() async {
+    if (!widget.isCurrentUser) return;
+    
+    try {
+      final giftService = GiftService();
+      await giftService.updatePinnedCategories(widget.userId, _pinnedCategories);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving pinned tags: $e')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer2<UserProvider, GiftProvider>(
       builder: (context, userProvider, giftProvider, _) {
+        if (_error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(_error!, style: const TextStyle(color: Colors.red)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _initializeScreen,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (_isInitializing) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
         return StreamBuilder<User?>(
           stream: userProvider.getUserStream(widget.userId),
           builder: (context, userSnapshot) {
@@ -280,7 +432,10 @@ class _GiftListScreenState extends State<GiftListScreen> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.filter_list),
-                          onPressed: _showFilterSheet,
+                          onPressed: () {
+                            final RenderBox button = context.findRenderObject() as RenderBox;
+                            _showFilterSheet(context, button);
+                          },
                           tooltip: 'Filter and sort',
                         ),
                         if (widget.isCurrentUser)
@@ -344,7 +499,10 @@ class _GiftListScreenState extends State<GiftListScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.filter_list),
-                      onPressed: _showFilterSheet,
+                      onPressed: () {
+                        final RenderBox button = context.findRenderObject() as RenderBox;
+                        _showFilterSheet(context, button);
+                      },
                       tooltip: 'Filter and sort',
                     ),
                     if (widget.isCurrentUser)
@@ -389,13 +547,12 @@ class _GiftListScreenState extends State<GiftListScreen> {
     final isPurchaser = gift.purchasedBy == currentUserId;
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Title and action buttons row
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -403,7 +560,7 @@ class _GiftListScreenState extends State<GiftListScreen> {
                   child: Text(
                     gift.name,
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                       decoration: gift.purchased ? TextDecoration.lineThrough : null,
                     ),
@@ -414,47 +571,55 @@ class _GiftListScreenState extends State<GiftListScreen> {
                   children: [
                     if (gift.url != null)
                       IconButton(
-                        icon: const Icon(Icons.link),
+                        icon: const Icon(Icons.link, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                         onPressed: () => _openGiftUrl(gift.url!),
                         tooltip: 'Open product link',
                       ),
+                    const SizedBox(width: 8),
                     if (canPurchase || isPurchaser)
                       IconButton(
                         icon: Icon(
                           gift.purchased ? Icons.check_circle : Icons.check_circle_outline,
                           color: gift.purchased ? Colors.green : null,
+                          size: 20,
                         ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                         onPressed: () => _togglePurchaseStatus(gift),
                         tooltip: gift.purchased ? 'Mark as unpurchased' : 'Mark as purchased',
                       ),
-                    if (widget.isCurrentUser)
+                    if (widget.isCurrentUser) ...[
+                      const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.edit),
+                        icon: const Icon(Icons.edit, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                         onPressed: () => _showEditGiftDialog(context, gift),
                         tooltip: 'Edit gift',
                       ),
+                    ],
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            // Description
             if (gift.description.isNotEmpty) ...[
+              const SizedBox(height: 4),
               Text(
                 gift.description,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-              const SizedBox(height: 8),
             ],
-            // Price and categories row
+            const SizedBox(height: 4),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 4,
+              runSpacing: 4,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 if (gift.price != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.green.shade50,
                       borderRadius: BorderRadius.circular(4),
@@ -464,11 +629,12 @@ class _GiftListScreenState extends State<GiftListScreen> {
                       style: TextStyle(
                         color: Colors.green.shade700,
                         fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
                   ),
                 ...gift.categories.map((category) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(4),
@@ -477,6 +643,7 @@ class _GiftListScreenState extends State<GiftListScreen> {
                     category,
                     style: TextStyle(
                       color: Colors.blue.shade700,
+                      fontSize: 12,
                     ),
                   ),
                 )),

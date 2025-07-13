@@ -2,7 +2,9 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:wikileet/models/gift.dart';
+import 'package:flutter/foundation.dart';
 
 class GiftService {
   final FirebaseFirestore _firestore;
@@ -52,6 +54,14 @@ class GiftService {
 
   // Method for batch adding multiple gifts
   Future<void> batchAddGifts(String userId, List<Gift> gifts) async {
+    if (gifts.isEmpty) return;
+    
+    // Validate all gifts have the same familyGroupId
+    final familyGroupId = gifts.first.familyGroupId;
+    if (gifts.any((gift) => gift.familyGroupId != familyGroupId)) {
+      throw Exception('All gifts must belong to the same family group');
+    }
+
     final batch = _firestore.batch();
     final userGiftsRef =
         _firestore.collection('users').doc(userId).collection('gifts');
@@ -70,12 +80,54 @@ class GiftService {
 
   // Add a new gift
   Future<void> addGift(String userId, Gift gift) async {
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('gifts')
-        .doc(gift.id)
-        .set(gift.toFirestore());
+    if (kDebugMode) {
+      print('\n=== GiftService.addGift ===');
+      print('Adding gift for user: $userId');
+      print('Gift ID: ${gift.id}');
+      print('Family Group ID: ${gift.familyGroupId}');
+    }
+
+    // First validate the gift belongs to a family group
+    if (gift.familyGroupId.isEmpty) {
+      throw Exception('Gift must have a valid family group ID');
+    }
+
+    // Validate the user belongs to the family group
+    final userDoc = await _firestore.collection('users').doc(userId).get();
+    final userData = userDoc.data();
+    if (userData == null) {
+      throw Exception('User not found');
+    }
+    
+    final userFamilyGroupId = userData['familyGroupId'] as String?;
+    if (userFamilyGroupId != gift.familyGroupId) {
+      throw Exception('Gift must belong to the user\'s current family group');
+    }
+
+    try {
+      if (kDebugMode) {
+        print('Creating Firestore document with ID: ${gift.id}');
+        print('Gift data: ${gift.toFirestore()}');
+      }
+
+      // Use .set() with merge:true to ensure we create or update
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('gifts')
+          .doc(gift.id)
+          .set(gift.toFirestore(), SetOptions(merge: true));
+      
+      if (kDebugMode) {
+        print('Gift document created/updated successfully');
+        print('=== End GiftService.addGift ===\n');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error creating gift document: $e');
+      }
+      rethrow;
+    }
   }
 
   // Retrieve a gift by ID for a specific user
@@ -95,6 +147,28 @@ class GiftService {
   /// Updates a gift's data, specifically for marking as purchased.
   Future<void> updateGift(
       String userId, String giftId, Map<String, dynamic> data) async {
+    // Ensure we're not changing the familyGroupId
+    if (data.containsKey('familyGroupId')) {
+      final gift = await getGift(userId, giftId);
+      if (gift != null && gift.familyGroupId != data['familyGroupId']) {
+        throw Exception('Cannot change gift\'s family group');
+      }
+    }
+
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('gifts')
+        .doc(giftId)
+        .update(data);
+  }
+
+  // Added updateGiftStatus method to delegate updating purchase status
+  Future<void> updateGiftStatus(String userId, String giftId, bool isPurchased, String? purchasedBy) async {
+    final data = {
+      'purchased': isPurchased,
+      'purchasedBy': purchasedBy,
+    };
     await _firestore
         .collection('users')
         .doc(userId)
@@ -194,5 +268,71 @@ class GiftService {
         .set({
           'pinnedCategories': categories,
         }, SetOptions(merge: true));
+  }
+
+  /// Get a user's family group ID
+  Future<String?> getUserFamilyGroupId(String userId) async {
+    final doc = await _firestore.collection('users').doc(userId).get();
+    return doc.data()?['familyGroupId'] as String?;
+  }
+
+  /// Get a filtered stream of gifts for a specific family group
+  Stream<List<Gift>> getGiftListStreamForFamily(String userId, String familyGroupId) {
+    if (familyGroupId.isEmpty) {
+      print('Empty familyGroupId provided');
+      return Stream.value([]);
+    }
+
+    // First validate user's family group membership
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .switchMap<List<Gift>>((userDoc) {
+          if (!userDoc.exists) {
+            print('User document does not exist');
+            return Stream.value([]);
+          }
+
+          final userData = userDoc.data();
+          if (userData == null) {
+            print('User data is null');
+            return Stream.value([]);
+          }
+
+          final userFamilyGroupId = userData['familyGroupId'] as String?;
+          if (userFamilyGroupId != familyGroupId) {
+            print('User familyGroupId ($userFamilyGroupId) does not match requested familyGroupId ($familyGroupId)');
+            return Stream.value([]);
+          }
+
+          print('Getting gifts for user $userId in family group $familyGroupId');
+
+          // Now get the gifts for this user and family
+          return _firestore
+              .collection('users')
+              .doc(userId)
+              .collection('gifts')
+              .where('familyGroupId', isEqualTo: familyGroupId)
+              .orderBy('createdAt', descending: true)
+              .snapshots()
+              .map((snapshot) {
+                try {
+                  final gifts = snapshot.docs
+                      .map((doc) => Gift.fromFirestore(doc))
+                      .toList();
+                  print('Retrieved ${gifts.length} gifts from Firestore');
+                  return gifts;
+                } catch (e) {
+                  print('Error mapping gifts: $e');
+                  return [];
+                }
+              });
+        });
+  }
+
+  /// Get current server timestamp for creating gifts
+  Timestamp getCurrentTimestamp() {
+    return Timestamp.now();
   }
 }
